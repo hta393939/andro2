@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,7 +44,7 @@ class MainActivity : ComponentActivity() {
 fun Greeting(name: String, modifier: Modifier = Modifier) {
     var buttonCount by remember { mutableIntStateOf(1) }
     //var buttonCount = { mutableIntStateOf(1) }
-    var clickCount = 2
+    var isCheck by remember {mutableStateOf(true)}
     Column {
         Text(
             text = "Hello $name! corge",
@@ -68,9 +69,9 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
                 text = "row1",
                 modifier = modifier
             )
-            Text(
-                text = "row2",
-                modifier = modifier
+            Checkbox(
+                checked = isCheck,
+                onCheckedChange = { isCheck = it }
             )
             Text(
                 text = "row3",
