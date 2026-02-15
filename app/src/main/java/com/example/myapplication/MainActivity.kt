@@ -1,13 +1,18 @@
 package com.example.myapplication
 
+import android.graphics.Paint.Align
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -19,8 +24,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.myapplication.ui.theme.MyApplicationTheme
 
 class MainActivity : ComponentActivity() {
@@ -60,10 +71,18 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
             )
         }
         Spacer(Modifier.weight(1f))
-        Text(
-            text = "Third",
-            modifier = modifier
-        )
+        Box(
+            modifier = Modifier
+                //.fillMaxWidth(1f)
+                //.height(48.dp)
+                .background(Color.Red)
+        ) {
+            Text(
+                fontSize = 100.sp,
+                text = "Third",
+                modifier = modifier.align(Alignment.Center)
+            )
+        }
         Row {
             Text(
                 text = "row1",
@@ -78,6 +97,11 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
                 modifier = modifier
             )
         }
+        Text(
+            text = "last太文字",
+            fontWeight = FontWeight.Bold,
+            fontSize = 32.sp
+        )
     }
 }
 
