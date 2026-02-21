@@ -1,5 +1,7 @@
 package com.example.myapplication
 
+import android.app.AlertDialog
+import android.content.Context
 import android.graphics.Paint.Align
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -43,7 +45,8 @@ class MainActivity : ComponentActivity() {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Greeting(
                         name = "Android",
-                        modifier = Modifier.padding(innerPadding)
+                        modifier = Modifier.padding(innerPadding),
+                        context = this
                     )
                 }
             }
@@ -52,7 +55,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
+fun Greeting(name: String, modifier: Modifier = Modifier, context: Context) {
     var buttonCount by remember { mutableIntStateOf(1) }
     //var buttonCount = { mutableIntStateOf(1) }
     var isCheck by remember {mutableStateOf(true)}
@@ -63,7 +66,20 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
         )
         Spacer(Modifier.weight(1f))
         Button(onClick = {
+
+        }){
+            Text(
+                text = "ボタン",
+                modifier = modifier
+            )
+        }
+        Spacer(Modifier.weight(1f))
+        Button(onClick = {
             buttonCount ++
+            AlertDialog.Builder(context)
+                .setTitle("あらーと")
+                .setMessage("メッセージ")
+                .show()
         }) {
             Text(
                 text = "Second $buttonCount",
@@ -105,10 +121,10 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
     }
 }
 
-@Preview(showBackground = true)
+//@Preview(showBackground = true)
 @Composable
-fun GreetingPreview() {
+fun GreetingPreview(context: Context) {
     MyApplicationTheme {
-        Greeting("Android")
+        Greeting("Android", context = context)
     }
 }
