@@ -22,36 +22,37 @@ class SubActivity : ComponentActivity() {
             }
         }
     }
-}
 
-@Composable
-fun PageComponent() {
-    // Unitを返す@Composableは大文字スタートらしい
-    Column(
-        modifier = Modifier
-    ) {
-        Text(
-            text = "サブアクティビティ"
-        )
-        Text(
-            text = "サブだよ"
-        )
-        Button(onClick = {
-            // TODO: ボタン
-        }) {
+    @Composable
+    fun PageComponent() {
+        // Unitを返す@Composableは大文字スタートらしい
+        Column(
+            modifier = Modifier
+        ) {
             Text(
-                text = "ボタン0",
-                modifier = Modifier
+                text = "サブアクティビティ"
             )
-        }
-        Button(onClick = {
-            // TODO: ボタン実装
+            Text(
+                text = "サブだよ"
+            )
+            Button(onClick = {
+                // TODO: ボタン
+            }) {
+                Text(
+                    text = "ボタン0",
+                    modifier = Modifier
+                )
+            }
+            Button(onClick = {
+                // TODO: ボタン実装
 
-        }) {
-            Text(
-                text = "ボタン1",
-                modifier = Modifier
-            )
+            }) {
+                Text(
+                    text = "ボタン1",
+                    modifier = Modifier
+                )
+            }
         }
     }
+
 }

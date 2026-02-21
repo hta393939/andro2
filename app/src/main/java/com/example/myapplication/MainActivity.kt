@@ -134,6 +134,15 @@ class MainActivity : ComponentActivity() {
                 )
             }
             Spacer(Modifier.weight(1f))
+            Button(onClick = {
+                init()
+            }) {
+                Text(
+                    text = "初期化",
+                    modifier = modifier
+                )
+            }
+            Spacer(Modifier.weight(1f))
             Row {
                 Text(
                     text = "row1",
