@@ -2,6 +2,7 @@ package com.example.myapplication
 
 import android.app.AlertDialog
 import android.content.Context
+import android.content.Intent
 import android.graphics.Paint.Align
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -34,6 +35,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat.startActivity
 import com.example.myapplication.ui.theme.MyApplicationTheme
 
 class MainActivity : ComponentActivity() {
@@ -66,6 +68,12 @@ fun Greeting(name: String, modifier: Modifier = Modifier, context: Context) {
         )
         Spacer(Modifier.weight(1f))
         Button(onClick = {
+            val intent = Intent(context, SubActivity::class.java)
+            startActivity(
+                context,
+                intent,
+                null,
+            )
 
         }){
             Text(
