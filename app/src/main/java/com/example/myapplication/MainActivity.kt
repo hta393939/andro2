@@ -1,8 +1,10 @@
 package com.example.myapplication
 
+import android.Manifest
 import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Paint.Align
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -52,6 +54,34 @@ class MainActivity : ComponentActivity() {
                     )
                 }
             }
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String?>,
+        grantResults: IntArray,
+        deviceId: Int
+    ) {
+        if (grantResults.isNotEmpty()
+            && grantResults[0] == PackageManager.PERMISSION_GRANTED
+        ) {
+            val intent = Intent(this, SubActivity::class.java)
+            startActivity(intent)
+        }
+        finish()
+    }
+
+    fun init() {
+        if (checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(
+                arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION),
+                0
+            )
+        } else {
+            val intent = Intent(this, SubActivity::class.java)
+            startActivity(intent)
+            finish()
         }
     }
 }
@@ -129,10 +159,11 @@ fun Greeting(name: String, modifier: Modifier = Modifier, context: Context) {
     }
 }
 
+/*
 //@Preview(showBackground = true)
 @Composable
 fun GreetingPreview(context: Context) {
     MyApplicationTheme {
         Greeting("Android", context = context)
     }
-}
+}*/

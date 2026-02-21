@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -30,8 +31,27 @@ fun PageComponent() {
         modifier = Modifier
     ) {
         Text(
-            text = "sub",
-            modifier = Modifier
+            text = "サブアクティビティ"
         )
+        Text(
+            text = "サブだよ"
+        )
+        Button(onClick = {
+            // TODO: ボタン
+        }) {
+            Text(
+                text = "ボタン0",
+                modifier = Modifier
+            )
+        }
+        Button(onClick = {
+            // TODO: ボタン実装
+
+        }) {
+            Text(
+                text = "ボタン1",
+                modifier = Modifier
+            )
+        }
     }
 }
