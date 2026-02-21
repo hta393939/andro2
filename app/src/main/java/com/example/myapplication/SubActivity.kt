@@ -1,9 +1,13 @@
 package com.example.myapplication
 
+import android.Manifest
+import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.annotation.RequiresPermission
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
@@ -54,5 +58,37 @@ class SubActivity : ComponentActivity() {
             }
         }
     }
+
+    fun getContext(): Context {
+        return this
+    }
+
+    public override fun onStart() {
+        super.onStart()
+
+        MyBluetoothController.init(this)
+
+        MyBluetoothController.getSender { hidd, device ->
+            Log.i("SubActivity", "callback")
+        }
+
+        //MyBluetoothController.getDisconnector{
+        //}
+    }
+
+    public override fun onPause() {
+        super.onPause()
+    }
+
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+    public override fun onStop() {
+        super.onStop()
+
+        MyBluetoothController.btHid?.unregisterApp()
+        MyBluetoothController.hostDevice = null
+        MyBluetoothController.btHid = null
+    }
+
+
 
 }
