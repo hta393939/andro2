@@ -1,53 +1,54 @@
 package com.example.myapplication
 
-import android.bluetooth.BluetoothDevice
-import android.bluetooth.BluetoothHidDevice
-import android.bluetooth.BluetoothManager
-import android.bluetooth.BluetoothProfile
+import android.app.Activity
+import android.content.Context
+import android.net.Uri
 import android.util.Log
+import java.io.OutputStreamWriter
+import androidx.core.net.toUri
+import java.lang.ref.WeakReference
 
-object BluetoothController: BluetoothHidDevice.Callback(), BluetoothProfile.ServiceListener {
-    override fun onSetReport(device: BluetoothDevice?, type: Byte, id: Byte, data: ByteArray?) {
-        super.onSetReport(device, type, id, data)
+object Processing {
+    //var uriString: String = ""
+    lateinit var uri: Uri
+    private var context: WeakReference<Context>? = null
+
+    fun init(ctx: Context, inUri: Uri) {
+        context = WeakReference(ctx.applicationContext)
+        uri = inUri
     }
 
-    override fun onGetReport(device: BluetoothDevice?, type: Byte, id: Byte, bufferSize: Int) {
-        super.onGetReport(device, type, id, bufferSize)
+    fun getContext(): Context? {
+        return context?.get()
     }
 
-    override fun onConnectionStateChanged(device: BluetoothDevice?, state: Int) {
-        super.onConnectionStateChanged(device, state)
+    fun appendLine(line: String) {
+        try {
+            getContext()?.let { ctx ->
+                val resolver = ctx.contentResolver
+                resolver.openOutputStream(uri, "wa")?.use { os ->
+                    OutputStreamWriter(os, Charsets.UTF_8).use { writer ->
+                        writer.appendLine(line)
+                        writer.flush()
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("LogWriter", "追記失敗", e)
+        }
     }
 
-    override fun onAppStatusChanged(pluggedDevice: BluetoothDevice?, registered: Boolean) {
-        super.onAppStatusChanged(pluggedDevice, registered)
+    fun i(tag: String, message: String) {
+        this.appendLine("$tag, $message")
     }
-
-
-
-
-    ////
-    override fun onServiceDisconnected(profile: Int) {
-        //TODO("Not yet implemented")
-        Log.i("disconnected", "onServiceDisconnected")
+    fun w(tag: String, message: String) {
+        this.appendLine("$tag $message")
     }
-
-    override fun onServiceConnected(profile: Int, proxy: BluetoothProfile?) {
-        //TODO("Not yet implemented")
-        Log.i("connected", "onServiceConnected")
+    fun e(tag: String, message: String) {
+        this.appendLine("$tag $message")
     }
-
-
-}
-
-
-
-
-class Processing {
-    public fun act1() {
-        //val manager = BluetoothManager()
-        //val apaptor = manager.getAdapter()
-        return
+    fun d(tag: String, message: String) {
+        this.appendLine("$tag $message")
     }
 }
 

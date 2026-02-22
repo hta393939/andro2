@@ -1,14 +1,22 @@
 package com.example.myapplication
 
 import android.Manifest
+import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
+import android.provider.DocumentsContract
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,9 +41,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat.startActivity
 import com.example.myapplication.ui.theme.MyApplicationTheme
+import java.io.File
+import androidx.core.net.toUri
+import kotlin.experimental.or
+import androidx.core.content.edit
 
 class MainActivity : ComponentActivity() {
     private var counter: Int = 10
+
+    private val logPrefs: SharedPreferences by lazy {
+        val context = this
+        context.getSharedPreferences("log_prefs", Context.MODE_PRIVATE)
+    }
+
+    companion object {
+        private const val KEY_LOG_URI = "persistent_log_uri"
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -108,6 +129,16 @@ class MainActivity : ComponentActivity() {
             }
             Spacer(Modifier.weight(1f))
             Button(onClick = {
+                // TODO: ファイル書き出しオープンしてそれから
+                pickAndCreateLogFile(createFileLauncher)
+            }) {
+                Text(
+                    text = "ログ!メッセージ",
+                    modifier = modifier
+                )
+            }
+            Spacer(Modifier.weight(1f))
+            Button(onClick = {
                 buttonCount++
                 counter ++
                 AlertDialog.Builder(context)
@@ -162,6 +193,53 @@ class MainActivity : ComponentActivity() {
                 fontWeight = FontWeight.Bold,
                 fontSize = 32.sp
             )
+        }
+    }
+
+    private val createFileLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == RESULT_OK) {
+            result.data?.data?.let { uri ->
+                onFileCreatedResult(uri)
+            }
+        }
+    }
+
+    fun getDownloadsUri(): Uri {
+        val downloadDir: File = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        val downloadDirPath = downloadDir.absolutePath
+        return downloadDirPath.toUri()
+    }
+
+    fun pickAndCreateLogFile(launcher: ActivityResultLauncher<Intent>) {
+        val intent = Intent(
+            Intent.ACTION_CREATE_DOCUMENT
+        ).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TITLE, "app_logs_${System.currentTimeMillis()}.txt")
+            // あくまで最初の提案場所
+            putExtra(DocumentsContract.EXTRA_INITIAL_URI, getDownloadsUri())
+        }
+        launcher.launch(intent)
+    }
+
+    fun onFileCreatedResult(uri: Uri?) {
+        uri ?: return
+
+        try {
+            val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            val context = this
+            context.contentResolver.takePersistableUriPermission(
+                uri, takeFlags
+            )
+            logPrefs.edit { putString(KEY_LOG_URI, uri.toString()) }
+            Processing.init(context, uri)
+            Processing.appendLine("start")
+        } catch (e: Exception) {
+            Log.e("LogWriter", "永続失敗")
         }
     }
 
