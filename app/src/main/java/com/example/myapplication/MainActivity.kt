@@ -152,19 +152,6 @@ class MainActivity : ComponentActivity() {
                 )
             }
             Spacer(Modifier.weight(1f))
-            Box(
-                modifier = Modifier
-                    //.fillMaxWidth(1f)
-                    //.height(48.dp)
-                    .background(Color.Red)
-            ) {
-                Text(
-                    fontSize = 100.sp,
-                    text = "Third",
-                    modifier = modifier.align(Alignment.Center)
-                )
-            }
-            Spacer(Modifier.weight(1f))
             Button(onClick = {
                 init()
             }) {
