@@ -11,8 +11,17 @@ import android.util.Log
 import androidx.annotation.RequiresPermission
 import androidx.core.content.ContextCompat.getSystemService
 
+// これでいいのか?
+import android.bluetooth.BluetoothHidDeviceAppSdpSettings
+import android.bluetooth.BluetoothHidDeviceAppQosSettings
+import android.content.Intent
+import android.os.Build
+import android.widget.Toast
+import androidx.core.app.ActivityCompat.startActivityForResult
 
 object MyBluetoothController: BluetoothHidDevice.Callback(), BluetoothProfile.ServiceListener {
+    /** 保持する */
+    private lateinit var appContext: Context
 
     val featureReport = FeatureReport()
 
@@ -47,7 +56,7 @@ object MyBluetoothController: BluetoothHidDevice.Callback(), BluetoothProfile.Se
 
     }
 
-
+    /** アダプター */
     val btAdapter by lazy {
         // TODO: 新しい書き方
         //val manager = getSystemService(this, Context.BLUETOOTH_SERVICE)
@@ -55,7 +64,9 @@ object MyBluetoothController: BluetoothHidDevice.Callback(), BluetoothProfile.Se
 
         BluetoothAdapter.getDefaultAdapter()!!
     }
+    /** HIDデバイス */
     var btHid: BluetoothHidDevice? = null
+    /** ホストデバイス */
     var hostDevice: BluetoothDevice? = null
     var autoPairFlag = false
 
@@ -66,7 +77,10 @@ object MyBluetoothController: BluetoothHidDevice.Callback(), BluetoothProfile.Se
     private var deviceListener: ((BluetoothHidDevice, BluetoothDevice)->Unit)? = null
     private var disconnectListener: (()->Unit)? = null
 
+    /** 初期化する */
     fun init(ctx: Context) {
+        appContext = ctx.applicationContext
+
         if (btHid != null)
             return
         btAdapter.getProfileProxy(ctx, this, BluetoothProfile.HID_DEVICE)
@@ -101,6 +115,14 @@ object MyBluetoothController: BluetoothHidDevice.Callback(), BluetoothProfile.Se
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     override fun onServiceConnected(profile: Int, proxy: BluetoothProfile) {
         Log.i(TAG, "Connected to service")
+
+        Toast.makeText(
+            appContext,
+            "サービストースト",
+            Toast.LENGTH_SHORT
+        ).show()
+
+
         if (profile != BluetoothProfile.HID_DEVICE) {
             Log.wtf(TAG, "WTF? $profile")
             return
@@ -114,9 +136,34 @@ object MyBluetoothController: BluetoothHidDevice.Callback(), BluetoothProfile.Se
         }
         this.btHid = btHid
         // TODO: 登録
-        //btHid.registerApp(sdpRecord, null, qosOut, {it.run()}, this)//--
-        //btAdapter.setScanMode(BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE, 300000)
+        btHid.registerApp(sdpRecord,
+            null,
+            qosOut,
+            {it.run()}, this)
 
+        // TODO: これActivityに通知するにはどうしたらいい???
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val intent = Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE).apply {
+                // 最大300秒
+                putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300)
+            }
+            //startActivityForResult(intent, REQUEST_CODE_DISCOVERABLE)
+        } else {
+            Log.w("BT", "No calling")
+            /*
+            try {
+                // TODO: なぜセットできない Android 12で無くなった
+                val success = btAdapter.setScanMode(BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE, 300000)
+                if (success) {
+                    Log.d("BT", "Discoverable mode set successfully")
+                } else {
+                    Log.w("BT", "Failed to the")
+                }
+            } catch (e: SecurityException) {
+                Log.e("BT", "Permission error", e)
+            } */
+        }
     }
 
 
@@ -208,7 +255,7 @@ object MyBluetoothController: BluetoothHidDevice.Callback(), BluetoothProfile.Se
 
     const val TAG = "MyBluetoothController"
 
-    /*
+
     private val sdpRecord by lazy {
         BluetoothHidDeviceAppSdpSettings(
             "Pixel HID1",
@@ -218,9 +265,8 @@ object MyBluetoothController: BluetoothHidDevice.Callback(), BluetoothProfile.Se
             DescriptorCollection.MOUSE_KEYBOARD_COMBO
         )
     }
-*/
 
-/*
+
     private val qosOut by lazy {
         BluetoothHidDeviceAppQosSettings(
             BluetoothHidDeviceAppQosSettings.SERVICE_BEST_EFFORT,
@@ -231,7 +277,6 @@ object MyBluetoothController: BluetoothHidDevice.Callback(), BluetoothProfile.Se
             BluetoothHidDeviceAppQosSettings.MAX
         )
     }
-    */
 
 }
 
