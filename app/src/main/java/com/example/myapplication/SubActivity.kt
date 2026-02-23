@@ -1,11 +1,20 @@
 package com.example.myapplication
 
 import android.Manifest
+import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
+import android.bluetooth.BluetoothGattDescriptor
+import android.bluetooth.BluetoothGattServer
+import android.bluetooth.BluetoothGattServerCallback
 import android.bluetooth.BluetoothGattService
 import android.bluetooth.BluetoothManager
+import android.bluetooth.BluetoothProfile
+import android.bluetooth.BluetoothStatusCodes
+import android.bluetooth.le.AdvertiseCallback
 import android.bluetooth.le.AdvertiseData
 import android.bluetooth.le.AdvertiseSettings
+import android.bluetooth.le.BluetoothLeAdvertiser
 import android.content.Context
 import android.os.Bundle
 import android.os.Handler
@@ -13,6 +22,7 @@ import android.os.ParcelUuid
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -23,10 +33,27 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.example.myapplication.ui.theme.MyApplicationTheme
+import java.util.UUID
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
+
 
 class SubActivity : ComponentActivity() {
 
     private var bluetoothStatus : MenuItem? =null
+
+    /** 接続成功時に保持する */
+    private var remoteDevice: BluetoothDevice? = null
+
+    private var serverCallback: BluetoothGattServerCallback? = null
+
+    /** サーバー */
+    private var gattSrv: BluetoothGattServer? = null
+
+    /** アドバタイザー */
+    private var adv: BluetoothLeAdvertiser? = null
+    /** 格納用 */
+    private var advertiseCallback: AdvertiseCallback? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,9 +80,10 @@ class SubActivity : ComponentActivity() {
             )
             Button(onClick = {
                 // TODO: ボタン
+                actAdv()
             }) {
                 Text(
-                    text = "ボタン0",
+                    text = "ボタン0 アドバータイズ開始",
                     modifier = Modifier
                 )
             }
@@ -71,36 +99,138 @@ class SubActivity : ComponentActivity() {
         }
     }
 
+
+
+    //@RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun actAdv() {
-        val manager: BluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        val manager: BluetoothManager = getSystemService(BLUETOOTH_SERVICE) as BluetoothManager
         val adapter = manager.adapter
+/*
+        if (adapter.isEnabled) {
+            val success = adapter.setName("andro2")
+            if (success) {
+                Log.i("BT", "setName")
+            } else {
+                Log.w("BT", "setName")
+            }
+        }*/
+
+        /** HID */
+        val UUID_SERVICE = uuidFrom16bit(0x1812)
+
+        val UUID_REPORTMAP = uuidFrom16bit(0x2A4B)
+        val UUID_INFO = uuidFrom16bit(0x2A4A)
+        val UUID_INPUT = uuidFrom16bit(0x2A4D)
+        val UUID_OUTPUT = uuidFrom16bit(0x2A4D)
+        val UUID_REFDESC = uuidFrom16bit(0x2908)
+        val UUID_CCCD = uuidFrom16bit(0x2902)
+
 
         try {
+            serverCallback = object : BluetoothGattServerCallback() {
+                override fun onConnectionStateChange(device: BluetoothDevice?, status: Int, newState: Int) {
+                    super.onConnectionStateChange(device, status, newState)
+
+                    when (newState) {
+                        BluetoothProfile.STATE_CONNECTED -> {
+                            remoteDevice = device
+                        }
+
+                        BluetoothProfile.STATE_DISCONNECTED -> {
+
+                        }
+                    }
+                }
+
+                override fun onCharacteristicReadRequest(
+                    device: BluetoothDevice?,
+                    requestId: Int,
+                    offset: Int,
+                    characteristic: BluetoothGattCharacteristic?
+                ) {
+                    super.onCharacteristicReadRequest(device, requestId, offset, characteristic)
+
+                    if (characteristic == null) {
+                        gattSrv?.sendResponse(
+                            device,
+                            requestId,
+                            BluetoothGatt.GATT_FAILURE,
+                            0,
+                            null)
+                        return
+                    }
+                    when (characteristic.uuid) {
+                        UUID_REPORTMAP.uuid -> {
+                            val data = 100
+                            val value = byteArrayOf(data.toByte())
+                            gattSrv?.sendResponse(
+                                device,
+                                requestId,
+                                BluetoothGatt.GATT_SUCCESS,
+                                0,
+                                value
+                            )
+                        }
+                        else -> {
+                            gattSrv?.sendResponse(
+                                device,
+                                requestId,
+                                BluetoothGatt.GATT_FAILURE,
+                                0,
+                                null
+                            )
+                        }
+                    }
+                }
+            }
+
+
             val gattServer = manager.openGattServer(
                 this,
-                gattServiceCallback()
+                serverCallback
             )
+            this.gattSrv = gattServer
 
             // (iii)
-            val gattService = BluetoothGattService(UUID_LIFF_SERVICE,
+            val gattService = BluetoothGattService(UUID_SERVICE.uuid,
                 BluetoothGattService.SERVICE_TYPE_PRIMARY)
 
-            val chara1 = BluetoothGattCharacteristic(UUID_LIFF_WRITE,
+            val input1 = BluetoothGattCharacteristic(UUID_INPUT.uuid,
+                BluetoothGattCharacteristic.PROPERTY_NOTIFY or
+                        BluetoothGattCharacteristic.PROPERTY_READ,
+                BluetoothGattCharacteristic.PERMISSION_READ)
+            gattService.addCharacteristic(input1)
+
+            val output1 = BluetoothGattCharacteristic(UUID_OUTPUT.uuid,
                 BluetoothGattCharacteristic.PROPERTY_WRITE,
                 BluetoothGattCharacteristic.PERMISSION_WRITE)
-            gattService.addCharacteristic(chara1)
+            gattService.addCharacteristic(output1)
+
+
+            val refDesc1 = BluetoothGattDescriptor(UUID_REFDESC.uuid,
+                BluetoothGattDescriptor.PERMISSION_READ
+            )
+            //BluetoothGatt.write
+            //refDesc1.value = byteArrayOf(0x01, 0x01)
+
+            val cccd1 = BluetoothGattDescriptor(UUID_CCCD.uuid,
+                BluetoothGattDescriptor.PERMISSION_READ or
+                        BluetoothGattDescriptor.PERMISSION_WRITE
+            )
+            input1.addDescriptor(cccd1)
 
             gattServer.addService(gattService)
 
             // (iv)
 
             val dataBuilder = AdvertiseData.Builder()
+            dataBuilder.setIncludeDeviceName(true)
             dataBuilder.setIncludeTxPowerLevel(true)
-            //dataBuilder.addServiceUuid(ParcelUuid.fromString(UUID_LIFF_SERVICE))
+            dataBuilder.addServiceUuid(UUID_SERVICE)
 
             val settingsBuilder = AdvertiseSettings.Builder()
-            settingsBuilder.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_BALANCED)
-            settingsBuilder.setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_MEDIUM)
+            settingsBuilder.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
+            settingsBuilder.setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
             settingsBuilder.setTimeout(0)
             settingsBuilder.setConnectable(true)
 
@@ -108,15 +238,40 @@ class SubActivity : ComponentActivity() {
             respBuilder.setIncludeDeviceName(true)
 
             // (v)
-            //advertiser.s
+            val advertiser = adapter.bluetoothLeAdvertiser
+            this.adv = advertiser
+
+            advertiseCallback = object : AdvertiseCallback() {
+                @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
+                override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
+                    super.onStartSuccess(settingsInEffect)
+                    Toast.makeText(
+                        getContext(),
+                        "開始成功",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+
+                override fun onStartFailure(errorCode: Int) {
+                    super.onStartFailure(errorCode)
+
+                    Toast.makeText(
+                        getContext(),
+                        "開始に失敗",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+
+            advertiser.startAdvertising(
+                settingsBuilder.build(),
+                dataBuilder.build(),
+                advertiseCallback
+            )
 
         } catch (se: SecurityException) {
             Log.w("BT", "open", se)
         }
-    }
-
-    fun gattServiceCallback() {
-
     }
 
     fun getContext(): Context {
@@ -166,6 +321,18 @@ class SubActivity : ComponentActivity() {
         //val sharedPref = this.getPreferences(MODE_PRIVATE)
 
         return super.onCreateOptionsMenu(menu)
+    }
+
+    companion object {
+        // 16-bit UUIDを指定してParcelUuidを作る（一番よく使われる方法）
+        fun uuidFrom16bit(shortUuid: Int): ParcelUuid {
+            // 16bit値を下位に配置
+            return ParcelUuid(
+                UUID.fromString(
+                    String.format("0000%04X-0000-1000-8000-00805F9B34FB", shortUuid and 0xFFFF)
+                )
+            )
+        }
     }
 
 }
