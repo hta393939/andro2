@@ -268,7 +268,8 @@ object DescriptorCollection {
         0xC0.toByte()                                // End Collection (Application)
     )
 
-      val KEYBOARD = byteArrayOf(
+    /** キーボード リポート 9バイト 1バイト, reserved, LED, key6つ */
+    val KEYBOARD = byteArrayOf(
 
         0x05.toByte(), 0x01.toByte(),                         // Usage Page (Generic Desktop)
         0x09.toByte(), 0x06.toByte(),                         // Usage (Keyboard)

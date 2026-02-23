@@ -8,6 +8,7 @@ import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothGattServer
 import android.bluetooth.BluetoothGattServerCallback
 import android.bluetooth.BluetoothGattService
+import android.bluetooth.BluetoothHidDevice
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.bluetooth.BluetoothStatusCodes
@@ -37,6 +38,12 @@ import java.util.UUID
 
 
 class SubActivity : ComponentActivity() {
+
+    /** 2A4D input report */
+    private val UUID_INPUT = uuidFrom16bit(0x2A4D)
+
+    /** 入力リポートキャラ */
+    private var inputChara: BluetoothGattCharacteristic? = null
 
     //private var bluetoothStatus : MenuItem? =null
 
@@ -85,11 +92,10 @@ class SubActivity : ComponentActivity() {
                 )
             }
             Button(onClick = {
-                // TODO: ボタン実装
-
+                sendReport()
             }) {
                 Text(
-                    text = "ボタン1",
+                    text = "ボタン1 キーリポート送信",
                     modifier = Modifier
                 )
             }
@@ -117,12 +123,12 @@ class SubActivity : ComponentActivity() {
             }
         }*/
 
-        /** HID */
+        /** 1812 HID */
         val UUID_SERVICE = uuidFrom16bit(0x1812)
-
+        /** 2A4B REPORTMAP */
         val UUID_REPORTMAP = uuidFrom16bit(0x2A4B)
         val UUID_INFO = uuidFrom16bit(0x2A4A)
-        val UUID_INPUT = uuidFrom16bit(0x2A4D)
+
         val UUID_OUTPUT = uuidFrom16bit(0x2A4D)
         val UUID_REFDESC = uuidFrom16bit(0x2908)
         val UUID_CCCD = uuidFrom16bit(0x2902)
@@ -203,7 +209,7 @@ class SubActivity : ComponentActivity() {
             )
             this.gattSrv = gattServer
 
-            // (iii)
+            /** サービス */
             val gattService = BluetoothGattService(UUID_SERVICE.uuid,
                 BluetoothGattService.SERVICE_TYPE_PRIMARY)
 
@@ -211,6 +217,7 @@ class SubActivity : ComponentActivity() {
                 BluetoothGattCharacteristic.PROPERTY_NOTIFY or
                         BluetoothGattCharacteristic.PROPERTY_READ,
                 BluetoothGattCharacteristic.PERMISSION_READ)
+            inputChara = input1
             gattService.addCharacteristic(input1)
 
             val output1 = BluetoothGattCharacteristic(UUID_OUTPUT.uuid,
@@ -236,7 +243,7 @@ class SubActivity : ComponentActivity() {
                 BluetoothGattDescriptor.PERMISSION_READ)
             // ペリフェラルはこの書き方しか無いらしい
             @Suppress("DEPRECATION")
-            reportMap1.value = byteArrayOf(0x00.toByte())
+            reportMap1.value = DescriptorCollection.KEYBOARD
             gattService.addCharacteristic(reportMap1)
 
             gattServer.addService(gattService)
@@ -332,6 +339,34 @@ class SubActivity : ComponentActivity() {
         //val sharedPref = this.getPreferences(MODE_PRIVATE)
 
         return super.onCreateOptionsMenu(menu)
+    }
+
+
+    fun sendReport() {
+        val buf = byteArrayOf(
+            0x00.toByte(),
+            0x00.toByte(), // reserved
+            0x00.toByte(), // LED
+            0x61.toByte(),
+            0x00.toByte(),
+            0x00.toByte(),
+            0x00.toByte(),
+            0x00.toByte(),
+            0x00.toByte(),
+        )
+        try {
+            val success = gattSrv?.notifyCharacteristicChanged(
+                remoteDevice!!,
+                inputChara!!,
+                false,
+                buf
+            ) ?: false
+            //if (!success) {
+            //    short("送信成功")
+            //}
+        } catch (se: SecurityException) {
+            short("送信catch $se")
+        }
     }
 
     companion object {
