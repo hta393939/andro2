@@ -34,8 +34,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.example.myapplication.ui.theme.MyApplicationTheme
 import java.util.UUID
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
 
 
 class SubActivity : ComponentActivity() {
@@ -107,7 +105,6 @@ class SubActivity : ComponentActivity() {
         ).show()
     }
 
-    //@RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun actAdv() {
         val manager: BluetoothManager = getSystemService(BLUETOOTH_SERVICE) as BluetoothManager
         val adapter = manager.adapter
@@ -293,29 +290,6 @@ class SubActivity : ComponentActivity() {
 
     public override fun onStart() {
         super.onStart()
-
-        /*
-        // 表示を更新する
-        bluetoothStatus?.tooltipText = "App not connected via bluetooth"
-
-        MyBluetoothController.init(this)
-
-        MyBluetoothController.getSender { hidd, device ->
-            Log.i("SubActivity", "callback")
-        }
-
-        MyBluetoothController.getDisconnector {
-            val mainHandler = Handler(getContext().mainLooper)
-
-            mainHandler.post(object : Runnable {
-                override fun run() {
-                    //bluetoothStatus?.icon = getDrawable(R.drawable.ic_action_app_not_connected)
-                    bluetoothStatus?.tooltipText = "App not connected via bluetooth"
-                }
-            })
-        }
-
-         */
     }
 
     public override fun onPause() {
@@ -325,10 +299,6 @@ class SubActivity : ComponentActivity() {
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     public override fun onStop() {
         super.onStop()
-
-        MyBluetoothController.btHid?.unregisterApp()
-        MyBluetoothController.hostDevice = null
-        MyBluetoothController.btHid = null
     }
 
     public override fun onCreateOptionsMenu(menu: Menu?): Boolean {
