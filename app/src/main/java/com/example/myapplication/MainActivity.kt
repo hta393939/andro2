@@ -170,7 +170,7 @@ class MainActivity : ComponentActivity() {
                 init()
             }) {
                 Text(
-                    text = "初期化",
+                    text = "1712 初期化",
                     modifier = modifier
                 )
             }

@@ -365,7 +365,10 @@ class SubActivity : ComponentActivity() {
             //    short("送信成功")
             //}
         } catch (se: SecurityException) {
-            short("送信catch $se")
+            //short("送信catch $se")
+            short("送信catch")
+        } catch (e: Exception) {
+            short("send catch $e")
         }
     }
 
