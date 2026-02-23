@@ -89,10 +89,24 @@ class MainActivity : ComponentActivity() {
         finish()
     }
 
+    /** permissionの獲得 */
     fun init() {
-        if (checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        val neededPermissions = mutableListOf<String>()
+
+        if (checkSelfPermission(
+                Manifest.permission.BLUETOOTH_CONNECT
+        ) != PackageManager.PERMISSION_GRANTED) {
+            neededPermissions.add(Manifest.permission.BLUETOOTH_CONNECT)
+        }
+        if (checkSelfPermission(
+                Manifest.permission.BLUETOOTH_ADVERTISE
+        ) != PackageManager.PERMISSION_GRANTED) {
+            neededPermissions.add(Manifest.permission.BLUETOOTH_ADVERTISE)
+        }
+
+        if (neededPermissions.isNotEmpty()) {
             requestPermissions(
-                arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION),
+                neededPermissions.toTypedArray(),
                 0
             )
         } else {

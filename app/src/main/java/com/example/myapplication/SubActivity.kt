@@ -99,7 +99,13 @@ class SubActivity : ComponentActivity() {
         }
     }
 
-
+    fun short(message: String) {
+        Toast.makeText(
+            getContext(),
+            message,
+            Toast.LENGTH_SHORT
+        ).show()
+    }
 
     //@RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun actAdv() {
@@ -127,6 +133,8 @@ class SubActivity : ComponentActivity() {
 
 
         try {
+            short("before server")
+
             serverCallback = object : BluetoothGattServerCallback() {
                 override fun onConnectionStateChange(device: BluetoothDevice?, status: Int, newState: Int) {
                     super.onConnectionStateChange(device, status, newState)
@@ -222,6 +230,7 @@ class SubActivity : ComponentActivity() {
             gattServer.addService(gattService)
 
             // (iv)
+            short("after add service")
 
             val dataBuilder = AdvertiseData.Builder()
             dataBuilder.setIncludeDeviceName(true)
@@ -263,6 +272,8 @@ class SubActivity : ComponentActivity() {
                 }
             }
 
+            short("before startAdvertising")
+
             advertiser.startAdvertising(
                 settingsBuilder.build(),
                 dataBuilder.build(),
@@ -271,6 +282,8 @@ class SubActivity : ComponentActivity() {
 
         } catch (se: SecurityException) {
             Log.w("BT", "open", se)
+
+            short("catch $se")
         }
     }
 
@@ -281,6 +294,7 @@ class SubActivity : ComponentActivity() {
     public override fun onStart() {
         super.onStart()
 
+        /*
         // 表示を更新する
         bluetoothStatus?.tooltipText = "App not connected via bluetooth"
 
@@ -300,6 +314,8 @@ class SubActivity : ComponentActivity() {
                 }
             })
         }
+
+         */
     }
 
     public override fun onPause() {
