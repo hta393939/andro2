@@ -41,6 +41,17 @@ class SubActivity : ComponentActivity() {
 
     /** 2A4D input report */
     private val UUID_INPUT = uuidFrom16bit(0x2A4D)
+    /** 1812 */
+    private val UUID_SERVICE_HID = uuidFrom16bit(0x1812)
+    /** 180A */
+    private val UUID_SERVICE_DIS = uuidFrom16bit(0x180A)
+    /** 2A50 */
+    private val UUID_CHAR_PNP = uuidFrom16bit(0x2A50)
+
+    /** 180F */
+    private val UUID_SERVICE_BAS = uuidFrom16bit(0x180F)
+    /** 2A19 */
+    private val UUID_CHAR_BAS = uuidFrom16bit(0x2A19)
 
     /** 入力リポートキャラ */
     private var inputChara: BluetoothGattCharacteristic? = null
@@ -123,8 +134,7 @@ class SubActivity : ComponentActivity() {
             }
         }*/
 
-        /** 1812 HID */
-        val UUID_SERVICE = uuidFrom16bit(0x1812)
+
         /** 2A4B REPORTMAP */
         val UUID_REPORTMAP = uuidFrom16bit(0x2A4B)
         val UUID_INFO = uuidFrom16bit(0x2A4A)
@@ -209,8 +219,31 @@ class SubActivity : ComponentActivity() {
             )
             this.gattSrv = gattServer
 
-            /** サービス */
-            val gattService = BluetoothGattService(UUID_SERVICE.uuid,
+            /** デバイス情報 */
+            val disService = BluetoothGattService(UUID_SERVICE_DIS.uuid,
+                BluetoothGattService.SERVICE_TYPE_PRIMARY)
+            val charPnP = BluetoothGattCharacteristic(UUID_CHAR_PNP.uuid,
+                BluetoothGattCharacteristic.PROPERTY_READ,
+                BluetoothGattCharacteristic.PERMISSION_READ)
+            charPnP.value = byteArrayOf(0x02.toByte(),
+                0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+                0x00.toByte(), 0x00.toByte(), 0x00.toByte())
+            disService.addCharacteristic(charPnP)
+            gattServer.addService(disService)
+
+            /** バッテリー */
+            val basService = BluetoothGattService(UUID_SERVICE_BAS.uuid,
+                BluetoothGattService.SERVICE_TYPE_PRIMARY)
+            val charBas = BluetoothGattCharacteristic(UUID_CHAR_BAS.uuid,
+                BluetoothGattCharacteristic.PROPERTY_READ,
+                BluetoothGattCharacteristic.PROPERTY_READ)
+            charBas.setValue(byteArrayOf(99.toByte()))
+            basService.addCharacteristic(charBas)
+            gattServer.addService(basService)
+
+
+            /** HIDサービス */
+            val gattService = BluetoothGattService(UUID_SERVICE_HID.uuid,
                 BluetoothGattService.SERVICE_TYPE_PRIMARY)
 
             val input1 = BluetoothGattCharacteristic(UUID_INPUT.uuid,
@@ -266,7 +299,9 @@ class SubActivity : ComponentActivity() {
              */
             dataBuilder.setIncludeDeviceName(true)
             dataBuilder.setIncludeTxPowerLevel(true)
-            dataBuilder.addServiceUuid(UUID_SERVICE)
+            dataBuilder.addServiceUuid(UUID_SERVICE_HID)
+                .addServiceUuid(UUID_SERVICE_DIS)
+                .addServiceUuid(UUID_SERVICE_BAS)
 
             val settingsBuilder = AdvertiseSettings.Builder()
             settingsBuilder.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
@@ -278,7 +313,7 @@ class SubActivity : ComponentActivity() {
             val pseudoAppear = byteArrayOf(
                 0xC4.toByte(), 0x03.toByte())
             respBuilder.setIncludeDeviceName(true)
-                .addServiceUuid(UUID_SERVICE)
+                .addServiceUuid(UUID_SERVICE_HID)
                 .addManufacturerData(0xffff, pseudoAppear)
                 //.addServiceData()
             // (v)
