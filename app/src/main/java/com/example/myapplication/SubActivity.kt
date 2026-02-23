@@ -331,6 +331,7 @@ class SubActivity : ComponentActivity() {
                 override fun onStartFailure(errorCode: Int) {
                     super.onStartFailure(errorCode)
 
+                    // NOTE: 1 は31byte超えてデータ多すぎエラーらしい;;
                     short("開始に失敗 $errorCode")
                 }
             }
