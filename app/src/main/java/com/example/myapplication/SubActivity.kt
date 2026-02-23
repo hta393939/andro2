@@ -38,7 +38,7 @@ import java.util.UUID
 
 class SubActivity : ComponentActivity() {
 
-    private var bluetoothStatus : MenuItem? =null
+    //private var bluetoothStatus : MenuItem? =null
 
     /** 接続成功時に保持する */
     private var remoteDevice: BluetoothDevice? = null
@@ -77,7 +77,6 @@ class SubActivity : ComponentActivity() {
                 text = "サブだよ"
             )
             Button(onClick = {
-                // TODO: ボタン
                 actAdv()
             }) {
                 Text(
@@ -144,6 +143,14 @@ class SubActivity : ComponentActivity() {
                         BluetoothProfile.STATE_DISCONNECTED -> {
 
                         }
+                    }
+                }
+
+                override fun onServiceAdded(status: Int, service: BluetoothGattService?) {
+                    super.onServiceAdded(status, service)
+
+                    if (status == BluetoothGatt.GATT_SUCCESS) {
+                        short("サービスが追加された")
                     }
                 }
 
@@ -215,8 +222,8 @@ class SubActivity : ComponentActivity() {
             val refDesc1 = BluetoothGattDescriptor(UUID_REFDESC.uuid,
                 BluetoothGattDescriptor.PERMISSION_READ
             )
-            //BluetoothGatt.write
-            //refDesc1.value = byteArrayOf(0x01, 0x01)
+            @Suppress("DEPRECATION")
+            refDesc1.value = byteArrayOf(0x01.toByte(), 0x01.toByte())
 
             val cccd1 = BluetoothGattDescriptor(UUID_CCCD.uuid,
                 BluetoothGattDescriptor.PERMISSION_READ or
@@ -224,12 +231,32 @@ class SubActivity : ComponentActivity() {
             )
             input1.addDescriptor(cccd1)
 
+            val reportMap1 = BluetoothGattCharacteristic(UUID_REPORTMAP.uuid,
+                BluetoothGattCharacteristic.PROPERTY_READ,
+                BluetoothGattDescriptor.PERMISSION_READ)
+            // ペリフェラルはこの書き方しか無いらしい
+            @Suppress("DEPRECATION")
+            reportMap1.value = byteArrayOf(0x00.toByte())
+            gattService.addCharacteristic(reportMap1)
+
             gattServer.addService(gattService)
 
-            // (iv)
+            // アドバータイズの作文と開始
             short("after add service")
 
             val dataBuilder = AdvertiseData.Builder()
+            /** gamepad */
+            //val appearValue: Short = 0x03C4.toShort()
+
+            /*
+            val appear = ByteBuffer.allocate(4)
+                .order(ByteOrder.LITTLE_ENDIAN).apply {
+                    put(3.toByte()) // Bytes
+                    put(0x19.toByte()) // Type
+                    putShort(appearValue)
+                }.array()
+            dataBuilder.addManufacturerData(0xFFFF, appear)
+             */
             dataBuilder.setIncludeDeviceName(true)
             dataBuilder.setIncludeTxPowerLevel(true)
             dataBuilder.addServiceUuid(UUID_SERVICE)
@@ -237,12 +264,16 @@ class SubActivity : ComponentActivity() {
             val settingsBuilder = AdvertiseSettings.Builder()
             settingsBuilder.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
             settingsBuilder.setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
-            settingsBuilder.setTimeout(0)
+            settingsBuilder.setTimeout(0) // タイムアウト無し
             settingsBuilder.setConnectable(true)
 
             val respBuilder = AdvertiseData.Builder()
+            val pseudoAppear = byteArrayOf(
+                0xC4.toByte(), 0x03.toByte())
             respBuilder.setIncludeDeviceName(true)
-
+                .addServiceUuid(UUID_SERVICE)
+                .addManufacturerData(0xffff, pseudoAppear)
+                //.addServiceData()
             // (v)
             val advertiser = adapter.bluetoothLeAdvertiser
             this.adv = advertiser
@@ -251,21 +282,14 @@ class SubActivity : ComponentActivity() {
                 @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
                 override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
                     super.onStartSuccess(settingsInEffect)
-                    Toast.makeText(
-                        getContext(),
-                        "開始成功",
-                        Toast.LENGTH_SHORT
-                    ).show()
+
+                    short("開始成功")
                 }
 
                 override fun onStartFailure(errorCode: Int) {
                     super.onStartFailure(errorCode)
 
-                    Toast.makeText(
-                        getContext(),
-                        "開始に失敗",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    short("開始に失敗 $errorCode")
                 }
             }
 
@@ -274,6 +298,7 @@ class SubActivity : ComponentActivity() {
             advertiser.startAdvertising(
                 settingsBuilder.build(),
                 dataBuilder.build(),
+                respBuilder.build(),
                 advertiseCallback
             )
 
