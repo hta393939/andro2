@@ -48,6 +48,13 @@ class SubActivity : ComponentActivity() {
     /** 2A50 */
     private val UUID_CHAR_PNP = uuidFrom16bit(0x2A50)
 
+    /** 1800 GAP */
+    private val UUID_SERVICE_GAP = uuidFrom16bit(0x1800)
+    /** 2A00 デバイス名 */
+    private val UUID_CHAR_DN = uuidFrom16bit(0x2A00)
+    /** 2A01 2バイト **/
+    private val UUID_CHAR_APPEAR = uuidFrom16bit(0x2A01)
+
     /** 180F */
     private val UUID_SERVICE_BAS = uuidFrom16bit(0x180F)
     /** 2A19 */
@@ -231,16 +238,31 @@ class SubActivity : ComponentActivity() {
             disService.addCharacteristic(charPnP)
             gattServer.addService(disService)
 
-            /** バッテリー */
+            /** バッテリー。moddableに寄せてみる */
             val basService = BluetoothGattService(UUID_SERVICE_BAS.uuid,
                 BluetoothGattService.SERVICE_TYPE_PRIMARY)
             val charBas = BluetoothGattCharacteristic(UUID_CHAR_BAS.uuid,
-                BluetoothGattCharacteristic.PROPERTY_READ,
-                BluetoothGattCharacteristic.PROPERTY_READ)
+                BluetoothGattCharacteristic.PROPERTY_READ or
+                        BluetoothGattCharacteristic.PROPERTY_NOTIFY,
+                BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED)
             charBas.setValue(byteArrayOf(99.toByte()))
             basService.addCharacteristic(charBas)
             gattServer.addService(basService)
 
+            /** GAP */
+            val gapService = BluetoothGattService(UUID_SERVICE_GAP.uuid,
+                BluetoothGattService.SERVICE_TYPE_PRIMARY)
+            val charDN = BluetoothGattCharacteristic(UUID_CHAR_DN.uuid,
+                BluetoothGattCharacteristic.PROPERTY_READ,
+                BluetoothGattCharacteristic.PERMISSION_READ)
+            charDN.value = byteArrayOf(0x61.toByte(), 0x32.toByte(), 0x33.toByte())
+            gapService.addCharacteristic(charDN)
+            val charAppear = BluetoothGattCharacteristic(UUID_CHAR_APPEAR.uuid,
+                BluetoothGattCharacteristic.PROPERTY_READ,
+                BluetoothGattCharacteristic.PERMISSION_READ)
+            charAppear.value = byteArrayOf(0xC3.toByte(), 0x03.toByte())
+            gapService.addCharacteristic(charAppear)
+            gattServer.addService(gapService)
 
             /** HIDサービス */
             val gattService = BluetoothGattService(UUID_SERVICE_HID.uuid,
@@ -300,7 +322,6 @@ class SubActivity : ComponentActivity() {
             dataBuilder.setIncludeDeviceName(true)
             dataBuilder.setIncludeTxPowerLevel(true)
             dataBuilder.addServiceUuid(UUID_SERVICE_HID)
-                .addServiceUuid(UUID_SERVICE_DIS)
                 .addServiceUuid(UUID_SERVICE_BAS)
 
             val settingsBuilder = AdvertiseSettings.Builder()
@@ -309,13 +330,14 @@ class SubActivity : ComponentActivity() {
             settingsBuilder.setTimeout(0) // タイムアウト無し
             settingsBuilder.setConnectable(true)
 
+            /*
             val respBuilder = AdvertiseData.Builder()
             val pseudoAppear = byteArrayOf(
                 0xC4.toByte(), 0x03.toByte())
             respBuilder.setIncludeDeviceName(true)
                 .addServiceUuid(UUID_SERVICE_HID)
-                .addManufacturerData(0xffff, pseudoAppear)
-                //.addServiceData()
+                //.addManufacturerData(0xffff, pseudoAppear)
+                //.addServiceData() */
             // (v)
             val advertiser = adapter.bluetoothLeAdvertiser
             this.adv = advertiser
@@ -341,7 +363,7 @@ class SubActivity : ComponentActivity() {
             advertiser.startAdvertising(
                 settingsBuilder.build(),
                 dataBuilder.build(),
-                respBuilder.build(),
+                //respBuilder.build(),
                 advertiseCallback
             )
 
