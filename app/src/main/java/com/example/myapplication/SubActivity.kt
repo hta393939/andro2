@@ -19,6 +19,7 @@ import android.bluetooth.le.BluetoothLeAdvertiser
 import android.content.Context
 import android.os.Bundle
 import android.os.Handler
+import android.os.Parcel
 import android.os.ParcelUuid
 import android.util.Log
 import android.view.Menu
@@ -34,6 +35,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.example.myapplication.ui.theme.MyApplicationTheme
+import java.nio.ByteBuffer
 import java.util.UUID
 
 
@@ -366,6 +368,25 @@ class SubActivity : ComponentActivity() {
             }
 
 
+            /*
+            fun dataParcel.writeToParcel(dest: Parcel, flags: Int): Unit {
+                val mid = Parcel()
+                super.writeToParcel(mid, flags)
+            } */
+            fun AdvertiseData.writeToParcel(dest: Parcel, flags: Int): Unit {
+                val mid = Parcel.obtain()
+                this.writeToParcel(mid, flags)
+                //val baseBuf = ByteBuffer.allocate(31)
+                //mid.marshall(baseBuf, )
+                // ByteArray
+                val baseBuf = mid.marshall()
+                val edit = baseBuf + 0x03.toByte() + 0x19.toByte() + 0x00.toByte() + 0x00.toByte()
+                dest.unmarshall(edit, 0, 31)
+            }
+            // TODO: 上書きチェック↑
+            val dataParcel = dataBuilder.build()
+
+
             val respBuilder = AdvertiseData.Builder()
             val pseudoAppear = byteArrayOf(
                 0xC4.toByte(), 0x03.toByte())
@@ -397,7 +418,7 @@ class SubActivity : ComponentActivity() {
 
             advertiser.startAdvertising(
                 settingsBuilder.build(),
-                dataBuilder.build(),
+                dataParcel,
                 respBuilder.build(),
                 advertiseCallback
             )
