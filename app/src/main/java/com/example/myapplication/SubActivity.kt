@@ -310,7 +310,7 @@ class SubActivity : ComponentActivity() {
             gapService.addCharacteristic(charAppear)
             gattServer.addService(gapService)
 
-            /** HIDサービス */
+            /** HIDサービス。ローカル変数 */
             val gattService = BluetoothGattService(
                 UUID_SERVICE_HID.uuid,
                 BluetoothGattService.SERVICE_TYPE_PRIMARY
@@ -326,6 +326,26 @@ class SubActivity : ComponentActivity() {
                 0x0b.toByte(), 0x01.toByte(), 0x00.toByte(), 0x15.toByte()
             )
             gattService.addCharacteristic(info1)
+
+            val cp1 = BluetoothGattCharacteristic(
+                UUID_CHAR_CONTROLPOINT.uuid,
+                BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE,
+                BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED or
+                        BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED
+            )
+            cp1.value = byteArrayOf(0x01.toByte()) // TODO: ここは実装する
+            gattService.addCharacteristic(cp1)
+
+            val pm1 = BluetoothGattCharacteristic(
+                UUID_CHAR_PROTOCOLMODE.uuid,
+                BluetoothGattCharacteristic.PROPERTY_READ or
+                        BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE,
+                BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED or
+                        BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE
+            )
+            pm1.value = byteArrayOf(0x01.toByte()) // TODO: ここは実装する
+            gattService.addCharacteristic(pm1)
+
 
             val input1 = BluetoothGattCharacteristic(
                 UUID_CHAR_INPUT.uuid,
