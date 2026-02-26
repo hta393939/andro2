@@ -48,7 +48,8 @@ import java.util.UUID
 
 data class UIState(
     val state: String = "進捗",
-    val latest: String = "開始"
+    val latest: String = "開始",
+    val console: String = ""
 )
 
 class SubVM : ViewModel() {
@@ -63,6 +64,11 @@ class SubVM : ViewModel() {
     fun setLatest(arg: String) {
         _uiState.update {
             it.copy(latest = arg)
+        }
+    }
+    fun addConsole(arg: String) {
+        _uiState.update { current ->
+            current.copy(console = current.console + "${arg}\n")
         }
     }
 }
@@ -175,14 +181,14 @@ class SubActivity : ComponentActivity() {
             }
             Button(onClick = {
                 counter1 ++
-                viewModel1?.setLatest("最新はこれ ${counter1}")
+                viewModel1?.setLatest("最新はこれ $counter1")
             }) {
                 Text(
                     text = "更新 ${uiState.latest}"
                 )
             }
             Text(
-                text = "latest ${uiState.latest}"
+                text = "$uiState.console"
             )
         }
     }
@@ -195,6 +201,7 @@ class SubActivity : ComponentActivity() {
         ).show()
     }
 
+    /** BondState はbroadcastで受け取る必要があるらしい */
     fun actAdv() {
         val manager: BluetoothManager = getSystemService(BLUETOOTH_SERVICE) as BluetoothManager
         val adapter = manager.adapter
@@ -209,7 +216,7 @@ class SubActivity : ComponentActivity() {
         }*/
 
         try {
-            short("before server")
+            //short("before server")
 
             serverCallback = object : BluetoothGattServerCallback() {
                 override fun onConnectionStateChange(
@@ -219,13 +226,18 @@ class SubActivity : ComponentActivity() {
                 ) {
                     super.onConnectionStateChange(device, status, newState)
 
+                    // 発火する
+                    viewModel1?.addConsole("onConnectionStateChange $newState ${device?.bondState} ${device?.name}")
+
                     when (newState) {
                         BluetoothProfile.STATE_CONNECTED -> {
                             remoteDevice = device
+
+                            viewModel1?.addConsole("接続された")
                         }
 
                         BluetoothProfile.STATE_DISCONNECTED -> {
-
+                            viewModel1?.addConsole("切断された")
                         }
                     }
                 }
@@ -238,6 +250,31 @@ class SubActivity : ComponentActivity() {
                     }
                 }
 
+                override fun onPhyRead(
+                    device: BluetoothDevice?,
+                    txPhy: Int,
+                    rxPhy: Int,
+                    status: Int
+                ) {
+                    super.onPhyRead(device, txPhy, rxPhy, status)
+                    // 発火する
+                    viewModel1?.addConsole("onPhyRead ${device?.name}")
+                }
+
+                override fun onPhyUpdate(
+                    device: BluetoothDevice?,
+                    txPhy: Int,
+                    rxPhy: Int,
+                    status: Int
+                ) {
+                    super.onPhyUpdate(device, txPhy, rxPhy, status)
+                    viewModel1?.addConsole("onPhyUpdate $status ${device?.bondState}")
+                }
+                override fun onMtuChanged(device: BluetoothDevice?, mtu: Int) {
+                    super.onMtuChanged(device, mtu)
+                    viewModel1?.addConsole("onMtuChanged ${device?.name} $mtu")
+                }
+
                 override fun onCharacteristicReadRequest(
                     device: BluetoothDevice?,
                     requestId: Int,
@@ -245,6 +282,8 @@ class SubActivity : ComponentActivity() {
                     characteristic: BluetoothGattCharacteristic?
                 ) {
                     super.onCharacteristicReadRequest(device, requestId, offset, characteristic)
+
+                    viewModel1?.addConsole("charread, $requestId, ${characteristic?.instanceId} ${characteristic?.uuid}")
 
                     if (characteristic == null) {
                         gattSrv?.sendResponse(
@@ -257,7 +296,7 @@ class SubActivity : ComponentActivity() {
                         return
                     }
                     when (characteristic.uuid) {
-                        UUID_CHAR_REPORTMAP.uuid -> {
+                        UUID_CHAR_INPUT.uuid -> {
                             val data = 66
                             val value = byteArrayOf(
                                 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
@@ -285,6 +324,29 @@ class SubActivity : ComponentActivity() {
                         }
                     }
                 }
+
+                override fun onCharacteristicWriteRequest(
+                    device: BluetoothDevice?,
+                    requestId: Int,
+                    characteristic: BluetoothGattCharacteristic?,
+                    preparedWrite: Boolean,
+                    responseNeeded: Boolean,
+                    offset: Int,
+                    value: ByteArray?
+                ) {
+                    super.onCharacteristicWriteRequest(
+                        device,
+                        requestId,
+                        characteristic,
+                        preparedWrite,
+                        responseNeeded,
+                        offset,
+                        value
+                    )
+
+                    viewModel1?.addConsole("charwreq, $requestId")
+                }
+
             }
 
 
