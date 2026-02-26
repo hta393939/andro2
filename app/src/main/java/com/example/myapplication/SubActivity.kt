@@ -33,16 +33,42 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import com.example.myapplication.ui.theme.MyApplicationTheme
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import java.nio.ByteBuffer
 import java.util.UUID
 
+data class UIState(
+    val state: String = "進捗",
+    val latest: String = "開始"
+)
+
+class SubVM : ViewModel() {
+    private val _uiState = MutableStateFlow(UIState())
+    val uiState: StateFlow<UIState> = _uiState.asStateFlow()
+
+    fun setState(arg: String) {
+        _uiState.update { current ->
+            current.copy(state = arg)
+        }
+    }
+    fun setLatest(arg: String) {
+        _uiState.update {
+            it.copy(latest = arg)
+        }
+    }
+}
 
 class SubActivity : ComponentActivity() {
 
-    /** 2A4D input report */
-    private val UUID_INPUT = uuidFrom16bit(0x2A4D)
     /** 1812 */
     private val UUID_SERVICE_HID = uuidFrom16bit(0x1812)
     /** 180A */
@@ -95,20 +121,32 @@ class SubActivity : ComponentActivity() {
     private var adv: BluetoothLeAdvertiser? = null
     /** 格納用 */
     private var advertiseCallback: AdvertiseCallback? = null
+    /** UI更新用 */
+    private var viewModel1: SubVM? = null
+
+    private var counter1: Int = 1
+
+    init {
+
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        viewModel1 = ViewModelProvider(this).get(SubVM::class)
+
         // ActivityじゃなくてComponentActivityにすると出てきた
         enableEdgeToEdge()
         setContent {
             MyApplicationTheme() {
-                PageComponent()
+                PageComponent(viewModel1!!)
             }
         }
     }
 
     @Composable
-    fun PageComponent() {
+    fun PageComponent(viewModel: SubVM) {
+        val uiState by viewModel.uiState.collectAsState()
         // Unitを返す@Composableは大文字スタートらしい
         Column(
             modifier = Modifier
@@ -117,7 +155,7 @@ class SubActivity : ComponentActivity() {
                 text = "サブアクティビティ"
             )
             Text(
-                text = "サブだよ"
+                text = "サブだよ ${uiState.state}"
             )
             Button(onClick = {
                 actAdv()
@@ -135,6 +173,17 @@ class SubActivity : ComponentActivity() {
                     modifier = Modifier
                 )
             }
+            Button(onClick = {
+                counter1 ++
+                viewModel1?.setLatest("最新はこれ ${counter1}")
+            }) {
+                Text(
+                    text = "更新 ${uiState.latest}"
+                )
+            }
+            Text(
+                text = "latest ${uiState.latest}"
+            )
         }
     }
 
