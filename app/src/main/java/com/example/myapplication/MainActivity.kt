@@ -121,80 +121,82 @@ class MainActivity : ComponentActivity() {
         var buttonCount by remember { mutableIntStateOf(1) }
         //var buttonCount = { mutableIntStateOf(1) }
         var isCheck by remember { mutableStateOf(true) }
-        Column {
-            Text(
-                text = "Hello $name! corge",
-                modifier = modifier
-            )
-            Spacer(Modifier.weight(1f))
-            Button(onClick = {
-                val intent = Intent(context, SubActivity::class.java)
-                startActivity(
-                    context,
-                    intent,
-                    null,
-                )
 
-            }) {
+            Column {
                 Text(
-                    text = "サブ起動",
+                    text = "Hello $name! corge",
                     modifier = modifier
+                )
+                Spacer(Modifier.weight(1f))
+                Button(onClick = {
+                    val intent = Intent(context, SubActivity::class.java)
+                    startActivity(
+                        context,
+                        intent,
+                        null,
+                    )
+
+                }) {
+                    Text(
+                        text = "サブ起動",
+                        modifier = modifier
+                    )
+                }
+                Spacer(Modifier.weight(1f))
+                Button(onClick = {
+                    // TODO: ファイル書き出しオープンしてそれから
+                    pickAndCreateLogFile(createFileLauncher)
+                }) {
+                    Text(
+                        text = "ログ!メッセージ",
+                        modifier = modifier
+                    )
+                }
+                Spacer(Modifier.weight(1f))
+                Button(onClick = {
+                    buttonCount++
+                    counter++
+                    AlertDialog.Builder(context)
+                        .setTitle("あらーとダイアログ")
+                        .setMessage("メッセージ $counter")
+                        .show()
+                }) {
+                    Text(
+                        text = "アラーと Second $buttonCount",
+                        modifier = modifier
+                    )
+                }
+                Spacer(Modifier.weight(1f))
+                Button(onClick = {
+                    init()
+                }) {
+                    Text(
+                        text = "20102 初期化",
+                        modifier = modifier
+                    )
+                }
+                Spacer(Modifier.weight(1f))
+                Row {
+                    Text(
+                        text = "row1",
+                        modifier = modifier
+                    )
+                    Checkbox(
+                        checked = isCheck,
+                        onCheckedChange = { isCheck = it }
+                    )
+                    Text(
+                        text = "row3",
+                        modifier = modifier
+                    )
+                }
+                Text(
+                    text = "last太文字",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 32.sp
                 )
             }
-            Spacer(Modifier.weight(1f))
-            Button(onClick = {
-                // TODO: ファイル書き出しオープンしてそれから
-                pickAndCreateLogFile(createFileLauncher)
-            }) {
-                Text(
-                    text = "ログ!メッセージ",
-                    modifier = modifier
-                )
-            }
-            Spacer(Modifier.weight(1f))
-            Button(onClick = {
-                buttonCount++
-                counter ++
-                AlertDialog.Builder(context)
-                    .setTitle("あらーとダイアログ")
-                    .setMessage("メッセージ $counter")
-                    .show()
-            }) {
-                Text(
-                    text = "アラーと Second $buttonCount",
-                    modifier = modifier
-                )
-            }
-            Spacer(Modifier.weight(1f))
-            Button(onClick = {
-                init()
-            }) {
-                Text(
-                    text = "20102 初期化",
-                    modifier = modifier
-                )
-            }
-            Spacer(Modifier.weight(1f))
-            Row {
-                Text(
-                    text = "row1",
-                    modifier = modifier
-                )
-                Checkbox(
-                    checked = isCheck,
-                    onCheckedChange = { isCheck = it }
-                )
-                Text(
-                    text = "row3",
-                    modifier = modifier
-                )
-            }
-            Text(
-                text = "last太文字",
-                fontWeight = FontWeight.Bold,
-                fontSize = 32.sp
-            )
-        }
+
     }
 
     private val createFileLauncher = registerForActivityResult(

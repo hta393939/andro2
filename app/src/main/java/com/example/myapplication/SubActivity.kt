@@ -17,7 +17,9 @@ import android.bluetooth.le.AdvertiseData
 import android.bluetooth.le.AdvertiseSettings
 import android.bluetooth.le.BluetoothLeAdvertiser
 import android.content.Context
+import android.os.BatteryManager
 import android.os.Bundle
+import android.os.CountDownTimer
 import android.os.Handler
 import android.os.Parcel
 import android.os.ParcelUuid
@@ -68,7 +70,7 @@ class SubVM : ViewModel() {
     }
     fun addConsole(arg: String) {
         _uiState.update { current ->
-            current.copy(console = current.console + "${arg}\n")
+            current.copy(console = "${arg}\n" + current.console)
         }
     }
 }
@@ -132,6 +134,8 @@ class SubActivity : ComponentActivity() {
 
     private var counter1: Int = 1
 
+    private lateinit var timer1: CountDownTimer
+
     init {
 
     }
@@ -187,8 +191,24 @@ class SubActivity : ComponentActivity() {
                     text = "更新 ${uiState.latest}"
                 )
             }
+            Button(onClick = {
+                timer1 = object : CountDownTimer(1_000, 0) {
+                    override fun onTick(millisUntilFinished: Long) {
+                        short("onTick $millisUntilFinished")
+                    }
+
+                    override fun onFinish() {
+                        short("onFinish")
+                    }
+                }.start()
+
+            }) {
+                Text(
+                    text = "ボタン3 キー"
+                )
+            }
             Text(
-                text = "$uiState.console"
+                text = " ${uiState.console}"
             )
         }
     }
@@ -234,6 +254,7 @@ class SubActivity : ComponentActivity() {
                             remoteDevice = device
 
                             viewModel1?.addConsole("接続された")
+                            viewModel1?.setState(ucode(0x1F4F6))
                         }
 
                         BluetoothProfile.STATE_DISCONNECTED -> {
@@ -295,34 +316,16 @@ class SubActivity : ComponentActivity() {
                         )
                         return
                     }
-                    when (characteristic.uuid) {
-                        UUID_CHAR_INPUT.uuid -> {
-                            val data = 66
-                            val value = byteArrayOf(
-                                0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
-                                data.toByte(), 0x00.toByte(),
-                                0x00.toByte(), 0x00.toByte(),
-                                0x00.toByte(), 0x00.toByte()
-                            )
-                            gattSrv?.sendResponse(
-                                device,
-                                requestId,
-                                BluetoothGatt.GATT_SUCCESS,
-                                0,
-                                value
-                            )
-                        }
 
-                        else -> {
-                            gattSrv?.sendResponse(
-                                device,
-                                requestId,
-                                BluetoothGatt.GATT_FAILURE,
-                                0,
-                                null
-                            )
-                        }
-                    }
+                    @Suppress("DEPRECATION")
+                    gattSrv?.sendResponse(
+                        device,
+                        requestId,
+                        BluetoothGatt.GATT_SUCCESS,
+                        offset,
+                        characteristic.value
+                    )
+
                 }
 
                 override fun onCharacteristicWriteRequest(
@@ -366,6 +369,7 @@ class SubActivity : ComponentActivity() {
                 BluetoothGattCharacteristic.PROPERTY_READ,
                 BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED
             )
+            @Suppress("DEPRECATION")
             charManufacturer.value = byteArrayOf(
                 0x62.toByte(), 0x31.toByte(), 0x30.toByte()
             )
@@ -376,6 +380,7 @@ class SubActivity : ComponentActivity() {
                 BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED or
                         BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED
             )
+            @Suppress("DEPRECATION")
             charPnP.value = byteArrayOf(
                 0x06.toByte(),
                 0x04.toByte(), 94.toByte(),
@@ -396,7 +401,8 @@ class SubActivity : ComponentActivity() {
                         BluetoothGattCharacteristic.PROPERTY_NOTIFY,
                 BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED
             )
-            charBas.setValue(byteArrayOf(99.toByte()))
+            @Suppress("DEPRECATION")
+            charBas.setValue(byteArrayOf(getBatteryPercentage().toByte()))
             basService.addCharacteristic(charBas)
             gattServer.addService(basService)
 
@@ -410,6 +416,7 @@ class SubActivity : ComponentActivity() {
                 BluetoothGattCharacteristic.PROPERTY_READ,
                 BluetoothGattCharacteristic.PERMISSION_READ
             )
+            @Suppress("DEPRECATION")
             charDN.value = byteArrayOf(0x61.toByte(), 0x32.toByte(), 0x33.toByte())
             gapService.addCharacteristic(charDN)
             val charAppear = BluetoothGattCharacteristic(
@@ -417,6 +424,7 @@ class SubActivity : ComponentActivity() {
                 BluetoothGattCharacteristic.PROPERTY_READ,
                 BluetoothGattCharacteristic.PERMISSION_READ
             )
+            @Suppress("DEPRECATION")
             charAppear.value = byteArrayOf(0xC3.toByte(), 0x03.toByte())
             gapService.addCharacteristic(charAppear)
             gattServer.addService(gapService)
@@ -433,6 +441,7 @@ class SubActivity : ComponentActivity() {
                 BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED or
                         BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED
             )
+            @Suppress("DEPRECATION")
             info1.value = byteArrayOf(
                 0x0b.toByte(), 0x01.toByte(), 0x00.toByte(), 0x15.toByte()
             )
@@ -444,6 +453,7 @@ class SubActivity : ComponentActivity() {
                 BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED or
                         BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED
             )
+            @Suppress("DEPRECATION")
             cp1.value = byteArrayOf(0x01.toByte()) // TODO: ここは実装する
             gattService.addCharacteristic(cp1)
 
@@ -454,6 +464,7 @@ class SubActivity : ComponentActivity() {
                 BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED or
                         BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE
             )
+            @Suppress("DEPRECATION")
             pm1.value = byteArrayOf(0x01.toByte()) // TODO: ここは実装する
             gattService.addCharacteristic(pm1)
 
@@ -558,6 +569,7 @@ class SubActivity : ComponentActivity() {
             }
 
             short("before startAdvertising")
+            viewModel1?.setState(ucode(0x1F4AC))
 
             advertiser.startAdvertising(
                 settingsBuilder.build(),
@@ -565,6 +577,7 @@ class SubActivity : ComponentActivity() {
                 respBuilder.build(),
                 advertiseCallback
             )
+
 
         } catch (se: SecurityException) {
             Log.w("BT", "open", se)
@@ -576,6 +589,12 @@ class SubActivity : ComponentActivity() {
     fun getContext(): Context {
         return this
     }
+
+    fun getBatteryPercentage(): Int {
+        val batteryManager = getContext().getSystemService(Context.BATTERY_SERVICE) as BatteryManager
+        return batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+    }
+
 
     public override fun onStart() {
         super.onStart()
@@ -600,30 +619,22 @@ class SubActivity : ComponentActivity() {
 
 
     fun sendReport() {
-        val buf = byteArrayOf(
-            0x00.toByte(),
-            0x00.toByte(), // reserved
-            0x00.toByte(), // LED
-            0x61.toByte(),
-            0x00.toByte(),
-            0x00.toByte(),
-            0x00.toByte(),
-            0x00.toByte(),
-            0x00.toByte(),
-        )
         try {
-            val success = gattSrv?.notifyCharacteristicChanged(
-                remoteDevice!!,
-                inputChara!!,
-                false,
-                buf
-            ) ?: false
+            @Suppress("DEPRECATION")
+            val success = inputChara?.value?.let {
+                gattSrv?.notifyCharacteristicChanged(
+                    remoteDevice!!,
+                    inputChara!!,
+                    false,
+                    it
+                )
+            } ?: false
             //if (!success) {
-            //    short("送信成功")
+            short("送信成功 $success")
             //}
         } catch (se: SecurityException) {
-            //short("送信catch $se")
-            short("送信catch")
+            short("送信catch $se")
+            //short("送信catch")
         } catch (e: Exception) {
             short("send catch $e")
         }
@@ -638,6 +649,10 @@ class SubActivity : ComponentActivity() {
                     String.format("0000%04X-0000-1000-8000-00805F9B34FB", shortUuid and 0xFFFF)
                 )
             )
+        }
+
+        fun ucode(code: Int): String {
+            return Character.toChars(code).concatToString()
         }
     }
 
