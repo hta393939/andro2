@@ -23,7 +23,6 @@ import android.os.CountDownTimer
 import android.os.ParcelUuid
 import android.util.Log
 import android.view.Menu
-import android.widget.Switch
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -33,6 +32,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
@@ -43,6 +43,9 @@ import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -96,6 +99,15 @@ class SubVM : ViewModel() {
     }
 }
 
+
+/** 通知キュー用 */
+class NotificationData {
+    var device: BluetoothDevice? = null
+    var char: BluetoothGattCharacteristic? = null
+    var byteSeq: ByteArray = ByteArray(0)
+    var responseNeeded: Boolean = false
+}
+
 class SubActivity : ComponentActivity() {
 
     /** 1812 */
@@ -131,12 +143,12 @@ class SubActivity : ComponentActivity() {
     val UUID_CHAR_INPUT = uuidFrom16bit(0x2A4D)
     /** 2908  */
     val UUID_DESC_REPORTREF = uuidFrom16bit(0x2908)
-
+    /** 2902 */
+    val UUID_DESC_CCCD = uuidFrom16bit(0x2902)
 
     /** 入力リポートキャラ */
     private var inputChara: BluetoothGattCharacteristic? = null
 
-    //private var bluetoothStatus : MenuItem? =null
 
     /** 接続成功時に保持する */
     private var remoteDevice: BluetoothDevice? = null
@@ -151,12 +163,19 @@ class SubActivity : ComponentActivity() {
 
     /** 格納用 */
     private var advertiseCallback: AdvertiseCallback? = null
+
+    private var mQueue: MutableList<NotificationData> = mutableListOf<NotificationData>()
+
     /** UI更新用 */
     private var viewModel1: SubVM? = null
 
     private var counter1: Int = 1
 
     private lateinit var timer1: CountDownTimer
+
+    private lateinit var mIntervalTimer2: CountDownTimer
+
+    private var mWithAdr = true
 
     init {
 
@@ -174,24 +193,39 @@ class SubActivity : ComponentActivity() {
                 PageComponent(viewModel1!!)
             }
         }
+
+        mIntervalTimer2 = object : CountDownTimer(0, 1_000) {
+            override fun onTick(millisUntilFinished: Long) {
+                sendNotification()
+            }
+            override fun onFinish() {
+                short("interval timer onFinish")
+            }
+        }.start()
     }
 
     /** GUI */
     @Composable
     fun PageComponent(viewModel: SubVM) {
+        var isOn by remember { mutableStateOf(false) }
+
         val uiState by viewModel.uiState.collectAsState()
         // Unitを返す@Composableは大文字スタートらしい
         Column(modifier = Modifier
             .background(color = Color(128, 128, 128))) {
-            Text(text = "サブアクティビティ")
-            Text(text = "隠れて見えない;;")
+            Text(text = "sub activity")
+            Text(text = "here is hidden")
             Text(text = "${uiState.state} ${uiState.remoteName}")
             Row(modifier = Modifier) {
                 Button(onClick = { readyServer() }) {
                     Text(text = "ready server")
                 }
-                Switch(checked = true,
-                    onCheckedChange = {  })
+                Spacer(modifier = Modifier.weight(0.125f))
+                Switch(checked = isOn,
+                    onCheckedChange = {
+                        isOn = it
+                        mWithAdr = it
+                    })
             }
             Button(onClick = { startAdv() }) {
                 Text(text = "start advertising")
@@ -200,19 +234,14 @@ class SubActivity : ComponentActivity() {
                 sendReport()
                 viewModel1?.addConsole("send key report")
             }) {
-                Text(
-                    text = "send key report",
-                    modifier = Modifier
-                )
+                Text(text = "send key report")
             }
             Button(onClick = {
                 counter1 ++
                 viewModel1?.setLatest("latest $counter1")
                 viewModel1?.addConsole("counter $counter1")
             }) {
-                Text(
-                    text = "更新 ${uiState.latest}"
-                )
+                Text(text = "update ${uiState.latest}")
             }
             Button(onClick = {
                 inputChara?.let {
@@ -238,15 +267,15 @@ class SubActivity : ComponentActivity() {
                 }.start()
 
             }) {
-                Text(
-                    text = "ボタン3 キー"
-                )
+                Text(text = "key report down, up timer")
             }
-            Box(modifier = Modifier.fillMaxWidth()
-                    .fillMaxHeight()) {
+            Box(modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight()) {
                 Text(
-                    text = " ${uiState.console}",
-                    modifier = Modifier.fillMaxWidth()
+                    text = uiState.console,
+                    modifier = Modifier
+                        .fillMaxWidth()
                         //.heightIn(max = 600.dp)
                         .verticalScroll(rememberScrollState())
                 )
@@ -428,6 +457,9 @@ class SubActivity : ComponentActivity() {
             )
             this.mGattSrv = gattServer
 
+            // NOTICE: クリア呼んだら減るかな
+            gattServer.clearServices()
+
 
             /** デバイス情報 */
             val disService = BluetoothGattService(
@@ -452,10 +484,10 @@ class SubActivity : ComponentActivity() {
             )
             @Suppress("DEPRECATION")
             charPnP.value = byteArrayOf(
-                0x06.toByte(),
-                0x04.toByte(), 94.toByte(),
-                0x07.toByte(), 165.toByte(),
-                0x00.toByte(), 0x03.toByte()
+                0x06.toByte(), // flags
+                0x04.toByte(), 94.toByte(), // VID
+                0x07.toByte(), 165.toByte(), // PID
+                0x00.toByte(), 0x03.toByte() // version
             )
             disService.addCharacteristic(charPnP)
             gattServer.addService(disService)
@@ -527,7 +559,7 @@ class SubActivity : ComponentActivity() {
                         BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED
             )
             @Suppress("DEPRECATION")
-            cp1.value = byteArrayOf(0x01.toByte()) // TODO: ここは実装する
+            cp1.value = byteArrayOf(0x00.toByte()) // TODO: ここは実装する
             hidService.addCharacteristic(cp1)
 
             val pm1 = BluetoothGattCharacteristic(
@@ -560,7 +592,17 @@ class SubActivity : ComponentActivity() {
             refDesc1.value = byteArrayOf(0x01.toByte(), 0x01.toByte())
             input1.addDescriptor(refDesc1)
 
+            val cccd1 = BluetoothGattDescriptor(
+                UUID_DESC_CCCD.uuid,
+                BluetoothGattDescriptor.PERMISSION_WRITE or
+                        BluetoothGattDescriptor.PERMISSION_READ
+            )
+            @Suppress("DEPRECATION")
+            cccd1.value = byteArrayOf(0x00.toByte(), 0x00.toByte())
+            input1.addDescriptor(cccd1)
+
             hidService.addCharacteristic(input1)
+
 
             /** リポートマップ */
             val reportMap1 = BluetoothGattCharacteristic(
@@ -579,7 +621,7 @@ class SubActivity : ComponentActivity() {
             short("add service done")
             viewModel1?.addConsole("gattServer ready")
 
-            if (true) {
+            if (mWithAdr) {
                 startAdv()
             }
 
@@ -608,9 +650,11 @@ class SubActivity : ComponentActivity() {
 
         val dataBuilder = AdvertiseData.Builder().apply {
             //setIncludeDeviceName(true)
-            setIncludeTxPowerLevel(true)
+            //setIncludeTxPowerLevel(true)
             addServiceUuid(UUID_SERVICE_HID)
-            //addServiceUuid(UUID_SERVICE_BAS)
+            addServiceUuid(UUID_SERVICE_BAS)
+            addServiceUuid(UUID_SERVICE_DIS)
+            addServiceUuid(UUID_SERVICE_GAP)
         }
         /** gamepad */
         //val appearValue: Short = 0x03C4.toShort()
@@ -621,7 +665,7 @@ class SubActivity : ComponentActivity() {
             setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
             setTimeout(0) // タイムアウト無し
             setConnectable(true)
-            setDiscoverable(true)
+            //setDiscoverable(true)
         }
 
         /*
@@ -673,7 +717,7 @@ class SubActivity : ComponentActivity() {
         mAdv?.startAdvertising(
             settingsBuilder.build(),
             dataParcel,
-            respBuilder.build(),
+            //respBuilder.build(),
             advertiseCallback
         )
     }
@@ -709,6 +753,24 @@ class SubActivity : ComponentActivity() {
         return super.onCreateOptionsMenu(menu)
     }
 
+    /** queueから取り出す場合 */
+    fun sendNotification() {
+        if (mQueue.isEmpty()) {
+            return
+        }
+        val noty = mQueue.removeFirst()
+        try {
+            mGattSrv?.notifyCharacteristicChanged(
+                noty.device!!,
+                noty.char!!,
+                false, // falseはnoti
+                noty.byteSeq
+            )
+        } catch (se: SecurityException) {
+            short("sendNoti $se")
+        }
+
+    }
 
     fun sendReport() {
         try {
