@@ -23,6 +23,7 @@ import android.os.CountDownTimer
 import android.os.ParcelUuid
 import android.util.Log
 import android.view.Menu
+import android.widget.Switch
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -30,6 +31,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresPermission
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -37,6 +39,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
+import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -50,7 +53,17 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.UUID
+
+
+fun ltime(): String {
+    val lt = LocalDateTime.now(ZoneId.of("Asia/Tokyo"))
+    val format = DateTimeFormatter.ofPattern("HH:mm:ss")
+    return lt.format(format)
+}
 
 data class UIState(
     val state: String = "進捗",
@@ -78,7 +91,7 @@ class SubVM : ViewModel() {
     }
     fun addConsole(arg: String) {
         _uiState.update { current ->
-            current.copy(console = "${arg}\n" + current.console)
+            current.copy(console = "${ltime()}, ${arg}\n" + current.console)
         }
     }
 }
@@ -163,6 +176,7 @@ class SubActivity : ComponentActivity() {
         }
     }
 
+    /** GUI */
     @Composable
     fun PageComponent(viewModel: SubVM) {
         val uiState by viewModel.uiState.collectAsState()
@@ -172,25 +186,29 @@ class SubActivity : ComponentActivity() {
             Text(text = "サブアクティビティ")
             Text(text = "隠れて見えない;;")
             Text(text = "${uiState.state} ${uiState.remoteName}")
-            Button(onClick = { readyServer() }) {
-                Text(text="ready server")
+            Row(modifier = Modifier) {
+                Button(onClick = { readyServer() }) {
+                    Text(text = "ready server")
+                }
+                Switch(checked = true,
+                    onCheckedChange = {  })
             }
             Button(onClick = { startAdv() }) {
                 Text(text = "start advertising")
             }
             Button(onClick = {
                 sendReport()
-                viewModel1?.addConsole("キーりぽーと送信試行")
+                viewModel1?.addConsole("send key report")
             }) {
                 Text(
-                    text = "ボタン1 キーリポート送信",
+                    text = "send key report",
                     modifier = Modifier
                 )
             }
             Button(onClick = {
                 counter1 ++
-                viewModel1?.setLatest("最新はこれ $counter1")
-                viewModel1?.addConsole("カウンターのみ $counter1")
+                viewModel1?.setLatest("latest $counter1")
+                viewModel1?.addConsole("counter $counter1")
             }) {
                 Text(
                     text = "更新 ${uiState.latest}"
@@ -559,6 +577,12 @@ class SubActivity : ComponentActivity() {
             gattServer.addService(hidService)
 
             short("add service done")
+            viewModel1?.addConsole("gattServer ready")
+
+            if (true) {
+                startAdv()
+            }
+
         } catch (se: SecurityException) {
             Log.w("BT", "open", se)
 
@@ -567,6 +591,7 @@ class SubActivity : ComponentActivity() {
     }
 
     fun startAdv() {
+        viewModel1?.addConsole("startAdv")
 
         val manager: BluetoothManager = getSystemService(BLUETOOTH_SERVICE) as BluetoothManager
         val adapter = manager.adapter
@@ -721,6 +746,8 @@ class SubActivity : ComponentActivity() {
         fun ucode(code: Int): String {
             return Character.toChars(code).concatToString()
         }
+
+
     }
 
 }
