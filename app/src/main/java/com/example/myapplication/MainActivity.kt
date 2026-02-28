@@ -49,6 +49,7 @@ import kotlin.experimental.or
 import androidx.core.content.edit
 
 class MainActivity : ComponentActivity() {
+    private val ver = 111
     private var counter: Int = 10
 
     private val logPrefs: SharedPreferences by lazy {
@@ -163,7 +164,7 @@ class MainActivity : ComponentActivity() {
                 Spacer(Modifier.weight(1f))
                 Button(shape = RoundedCornerShape(8.dp),
                     onClick = { init() }) {
-                    Text(text = "1418-1 start")
+                    Text(text = "start $ver")
                 }
                 Spacer(Modifier.weight(1f))
                 Row {

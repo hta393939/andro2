@@ -136,8 +136,6 @@ class SubActivity : ComponentActivity() {
     /** アドバタイザー */
     private var mAdv: BluetoothLeAdvertiser? = null
 
-    private var mAdapter: BluetoothAdapter? = null
-
     /** 格納用 */
     private var advertiseCallback: AdvertiseCallback? = null
     /** UI更新用 */
@@ -249,17 +247,6 @@ class SubActivity : ComponentActivity() {
     /** BondState はbroadcastで受け取る必要があるらしい */
     fun readyServer() {
         val manager: BluetoothManager = getSystemService(BLUETOOTH_SERVICE) as BluetoothManager
-        val adapter = manager.adapter
-        mAdapter = adapter
-/*
-        if (adapter.isEnabled) {
-            val success = adapter.setName("andro2")
-            if (success) {
-                Log.i("BT", "setName")
-            } else {
-                Log.w("BT", "setName")
-            }
-        }*/
 
         try {
             //short("before server")
@@ -283,6 +270,8 @@ class SubActivity : ComponentActivity() {
                             viewModel1?.setState(ucode(0x1F4F6))
                             val remoteName = device?.name
                             viewModel1?.setRemoteName("$remoteName")
+
+                            mAdv?.stopAdvertising(advertiseCallback)
                         }
 
                         BluetoothProfile.STATE_DISCONNECTED -> {
@@ -295,9 +284,7 @@ class SubActivity : ComponentActivity() {
                 override fun onServiceAdded(status: Int, service: BluetoothGattService?) {
                     super.onServiceAdded(status, service)
 
-                    if (status == BluetoothGatt.GATT_SUCCESS) {
-                        short("サービスが追加された")
-                    }
+                    short("onServiceAdded $status")
                 }
 
                 override fun onPhyRead(
@@ -416,7 +403,7 @@ class SubActivity : ComponentActivity() {
 
             }
 
-
+            // 開く
             val gattServer = manager.openGattServer(
                 this,
                 serverCallback
@@ -466,8 +453,10 @@ class SubActivity : ComponentActivity() {
                         BluetoothGattCharacteristic.PROPERTY_NOTIFY,
                 BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED
             )
+            val battery = getBatteryPercentage()
+            viewModel1?.addConsole("battery, $battery")
             @Suppress("DEPRECATION")
-            charBas.setValue(byteArrayOf(getBatteryPercentage().toByte()))
+            charBas.setValue(byteArrayOf(battery.toByte()))
             basService.addCharacteristic(charBas)
             gattServer.addService(basService)
 
@@ -569,8 +558,7 @@ class SubActivity : ComponentActivity() {
 
             gattServer.addService(hidService)
 
-            // アドバータイズの作文と開始
-            short("after add service")
+            short("add service done")
         } catch (se: SecurityException) {
             Log.w("BT", "open", se)
 
@@ -579,6 +567,19 @@ class SubActivity : ComponentActivity() {
     }
 
     fun startAdv() {
+
+        val manager: BluetoothManager = getSystemService(BLUETOOTH_SERVICE) as BluetoothManager
+        val adapter = manager.adapter
+        //mAdapter = adapter
+        /*
+                if (adapter.isEnabled) {
+                    val success = adapter.setName("andro2")
+                    if (success) {
+                        Log.i("BT", "setName")
+                    } else {
+                        Log.w("BT", "setName")
+                    }
+                }*/
 
         val dataBuilder = AdvertiseData.Builder().apply {
             //setIncludeDeviceName(true)
@@ -622,7 +623,7 @@ class SubActivity : ComponentActivity() {
             addServiceUuid(UUID_SERVICE_BAS)
         }
 
-        val advertiser = mAdapter?.bluetoothLeAdvertiser
+        val advertiser = adapter.bluetoothLeAdvertiser
         this.mAdv = advertiser
 
         advertiseCallback = object : AdvertiseCallback() {
