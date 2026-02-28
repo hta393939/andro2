@@ -52,7 +52,8 @@ fun MyApplicationTheme(
     }
 
     MaterialTheme(
-        colorScheme = colorScheme,
+        //colorScheme = colorScheme,
+        colorScheme = DarkColorScheme, // 強制ダーク
         typography = Typography2,
         //typography = Typography,
         content = content

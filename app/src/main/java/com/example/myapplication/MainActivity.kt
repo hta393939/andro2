@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Scaffold
@@ -38,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat.startActivity
 import com.example.myapplication.ui.theme.MyApplicationTheme
@@ -153,7 +155,8 @@ class MainActivity : ComponentActivity() {
                     )
                 }
                 Spacer(Modifier.weight(1f))
-                Button(onClick = {
+                Button(shape = RoundedCornerShape(8.dp),
+                    onClick = {
                     buttonCount++
                     counter++
                     AlertDialog.Builder(context)

@@ -31,13 +31,19 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresPermission
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.myapplication.ui.theme.MyApplicationTheme
@@ -51,6 +57,7 @@ import java.util.UUID
 data class UIState(
     val state: String = "進捗",
     val latest: String = "開始",
+    val remoteName: String = "",
     val console: String = ""
 )
 
@@ -67,6 +74,9 @@ class SubVM : ViewModel() {
         _uiState.update {
             it.copy(latest = arg)
         }
+    }
+    fun setRemoteName(arg: String) {
+        _uiState.update { it.copy(remoteName = arg) }
     }
     fun addConsole(arg: String) {
         _uiState.update { current ->
@@ -165,7 +175,10 @@ class SubActivity : ComponentActivity() {
                 text = "サブアクティビティ"
             )
             Text(
-                text = "サブだよ ${uiState.state}"
+                text = "隠れて見えない;;"
+            )
+            Text(
+                text = "${uiState.state} ${uiState.remoteName}"
             )
             Button(onClick = {
                 actAdv()
@@ -177,6 +190,7 @@ class SubActivity : ComponentActivity() {
             }
             Button(onClick = {
                 sendReport()
+                viewModel1?.addConsole("キー送信試行")
             }) {
                 Text(
                     text = "ボタン1 キーリポート送信",
@@ -192,6 +206,12 @@ class SubActivity : ComponentActivity() {
                 )
             }
             Button(onClick = {
+                inputChara?.let {
+                    @Suppress("DEPRECATION")
+                    it.value[3] = 0x62
+                }
+                sendReport()
+
                 timer1 = object : CountDownTimer(1_000, 0) {
                     override fun onTick(millisUntilFinished: Long) {
                         short("onTick $millisUntilFinished")
@@ -199,6 +219,12 @@ class SubActivity : ComponentActivity() {
 
                     override fun onFinish() {
                         short("onFinish")
+
+                        inputChara?.let {
+                            @Suppress("DEPRECATION")
+                            it.value[3] = 0
+                            sendReport()
+                        }
                     }
                 }.start()
 
@@ -207,9 +233,15 @@ class SubActivity : ComponentActivity() {
                     text = "ボタン3 キー"
                 )
             }
-            Text(
-                text = " ${uiState.console}"
-            )
+            Box(modifier = Modifier.fillMaxWidth()
+                .heightIn(max = 300.dp)) {
+                Text(
+                    text = " ${uiState.console}",
+                    modifier = Modifier.fillMaxWidth()
+                        .heightIn(max = 300.dp)
+                        .verticalScroll(rememberScrollState())
+                )
+            }
         }
     }
 
@@ -255,6 +287,8 @@ class SubActivity : ComponentActivity() {
 
                             viewModel1?.addConsole("接続された")
                             viewModel1?.setState(ucode(0x1F4F6))
+                            val remoteName = device?.name
+                            viewModel1?.setRemoteName("$remoteName")
                         }
 
                         BluetoothProfile.STATE_DISCONNECTED -> {
@@ -348,6 +382,39 @@ class SubActivity : ComponentActivity() {
                     )
 
                     viewModel1?.addConsole("charwreq, $requestId")
+                }
+
+                override fun onDescriptorReadRequest(
+                    device: BluetoothDevice?,
+                    requestId: Int,
+                    offset: Int,
+                    descriptor: BluetoothGattDescriptor?
+                ) {
+                    super.onDescriptorReadRequest(device, requestId, offset, descriptor)
+
+                    viewModel1?.addConsole("descread")
+                }
+
+                override fun onDescriptorWriteRequest(
+                    device: BluetoothDevice?,
+                    requestId: Int,
+                    descriptor: BluetoothGattDescriptor?,
+                    preparedWrite: Boolean,
+                    responseNeeded: Boolean,
+                    offset: Int,
+                    value: ByteArray?
+                ) {
+                    super.onDescriptorWriteRequest(
+                        device,
+                        requestId,
+                        descriptor,
+                        preparedWrite,
+                        responseNeeded,
+                        offset,
+                        value
+                    )
+
+                    viewModel1?.addConsole("descwrite")
                 }
 
             }
