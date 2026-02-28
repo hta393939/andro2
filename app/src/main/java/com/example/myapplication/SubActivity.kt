@@ -190,7 +190,7 @@ class SubActivity : ComponentActivity() {
             }
             Button(onClick = {
                 sendReport()
-                viewModel1?.addConsole("キー送信試行")
+                viewModel1?.addConsole("キーりぽーと送信試行")
             }) {
                 Text(
                     text = "ボタン1 キーリポート送信",
@@ -200,6 +200,7 @@ class SubActivity : ComponentActivity() {
             Button(onClick = {
                 counter1 ++
                 viewModel1?.setLatest("最新はこれ $counter1")
+                viewModel1?.addConsole("カウンターのみ $counter1")
             }) {
                 Text(
                     text = "更新 ${uiState.latest}"
@@ -234,11 +235,11 @@ class SubActivity : ComponentActivity() {
                 )
             }
             Box(modifier = Modifier.fillMaxWidth()
-                .heightIn(max = 300.dp)) {
+                .heightIn(max = 600.dp)) {
                 Text(
                     text = " ${uiState.console}",
                     modifier = Modifier.fillMaxWidth()
-                        .heightIn(max = 300.dp)
+                        .heightIn(max = 600.dp)
                         .verticalScroll(rememberScrollState())
                 )
             }
