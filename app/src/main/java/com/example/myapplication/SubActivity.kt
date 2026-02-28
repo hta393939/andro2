@@ -477,6 +477,7 @@ class SubActivity : ComponentActivity() {
             // NOTICE: クリア呼んだら減るかな
             gattServer.clearServices()
 
+            val useDeviceNameInDIS = false
 
             /** デバイス情報 */
             val disService = BluetoothGattService(
@@ -492,22 +493,32 @@ class SubActivity : ComponentActivity() {
             charManufacturer.value = byteArrayOf(
                 0x62.toByte(), 0x31.toByte(), 0x30.toByte()
             )
-            disService.addCharacteristic(charManufacturer)
+            if (useDeviceNameInDIS) {
+                disService.addCharacteristic(charManufacturer)
+            }
+
             val charPnP = BluetoothGattCharacteristic(
                 UUID_CHAR_PNP.uuid,
                 BluetoothGattCharacteristic.PROPERTY_READ,
-                BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED or
-                        BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED
+                BluetoothGattCharacteristic.PERMISSION_READ
             )
             @Suppress("DEPRECATION")
+            charPnP.value = byteArrayOf(
+                0x02.toByte(), // flags
+                0x00.toByte(), 0x00.toByte(), // VID
+                0x00.toByte(), 0x00.toByte(), // PID
+                0x00.toByte(), 0x00.toByte() // version
+            )
+            /*
             charPnP.value = byteArrayOf(
                 0x06.toByte(), // flags
                 0x04.toByte(), 94.toByte(), // VID
                 0x07.toByte(), 165.toByte(), // PID
                 0x00.toByte(), 0x03.toByte() // version
-            )
+            ) */
             disService.addCharacteristic(charPnP)
             gattServer.addService(disService)
+
 
             /** バッテリー。moddableに寄せてみる */
             val basService = BluetoothGattService(
@@ -516,9 +527,8 @@ class SubActivity : ComponentActivity() {
             )
             val charBas = BluetoothGattCharacteristic(
                 UUID_CHAR_BAS.uuid,
-                BluetoothGattCharacteristic.PROPERTY_READ or
-                        BluetoothGattCharacteristic.PROPERTY_NOTIFY,
-                BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED
+                BluetoothGattCharacteristic.PROPERTY_READ,
+                BluetoothGattCharacteristic.PERMISSION_READ
             )
             val battery = getBatteryPercentage()
             viewModel1?.addConsole("battery, $battery")
@@ -577,8 +587,7 @@ class SubActivity : ComponentActivity() {
             val cp1 = BluetoothGattCharacteristic(
                 UUID_CHAR_CONTROLPOINT.uuid,
                 BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE,
-                BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED or
-                        BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED
+                BluetoothGattCharacteristic.PERMISSION_WRITE
             )
             @Suppress("DEPRECATION")
             cp1.value = byteArrayOf(0x00.toByte()) // TODO: ここは実装する
@@ -588,8 +597,8 @@ class SubActivity : ComponentActivity() {
                 UUID_CHAR_PROTOCOLMODE.uuid,
                 BluetoothGattCharacteristic.PROPERTY_READ or
                         BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE,
-                BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED or
-                        BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED
+                BluetoothGattCharacteristic.PERMISSION_WRITE or
+                        BluetoothGattCharacteristic.PERMISSION_WRITE
             )
             @Suppress("DEPRECATION")
             pm1.value = byteArrayOf(0x01.toByte()) // TODO: ここは実装する
@@ -630,8 +639,7 @@ class SubActivity : ComponentActivity() {
             val reportMap1 = BluetoothGattCharacteristic(
                 UUID_CHAR_REPORTMAP.uuid,
                 BluetoothGattCharacteristic.PROPERTY_READ,
-                BluetoothGattDescriptor.PERMISSION_READ_ENCRYPTED or
-                        BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED
+                BluetoothGattDescriptor.PERMISSION_READ
             )
             // ペリフェラルはこの書き方しか無いらしい
             @Suppress("DEPRECATION")
