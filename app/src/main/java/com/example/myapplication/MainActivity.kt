@@ -49,7 +49,7 @@ import kotlin.experimental.or
 import androidx.core.content.edit
 
 class MainActivity : ComponentActivity() {
-    private val ver = 1113
+    private val ver = 1115
     private var counter: Int = 10
 
     private val logPrefs: SharedPreferences by lazy {
@@ -155,11 +155,11 @@ class MainActivity : ComponentActivity() {
                     buttonCount++
                     counter++
                     AlertDialog.Builder(context)
-                        .setTitle("あらーとダイアログ")
-                        .setMessage("メッセージ $counter")
+                        .setTitle("alert dialog")
+                        .setMessage("message $counter")
                         .show()
                 }) {
-                    Text(text = "アラーと Second $buttonCount")
+                    Text(text = "alert Second $buttonCount")
                 }
                 Spacer(Modifier.weight(1f))
                 Button(shape = RoundedCornerShape(8.dp),
@@ -176,7 +176,7 @@ class MainActivity : ComponentActivity() {
                     Text(text = "row3")
                 }
                 Text(
-                    text = "last太文字",
+                    text = "last bold",
                     fontWeight = FontWeight.Bold,
                     fontSize = 32.sp
                 )

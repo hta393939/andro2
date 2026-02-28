@@ -207,7 +207,7 @@ class SubActivity : ComponentActivity() {
     /** GUI */
     @Composable
     fun PageComponent(viewModel: SubVM) {
-        var isOn by remember { mutableStateOf(false) }
+        var isOn by remember { mutableStateOf(true) }
 
         val uiState by viewModel.uiState.collectAsState()
         // Unitを返す@Composableは大文字スタートらしい
@@ -650,7 +650,7 @@ class SubActivity : ComponentActivity() {
 
         val dataBuilder = AdvertiseData.Builder().apply {
             //setIncludeDeviceName(true)
-            //setIncludeTxPowerLevel(true)
+            setIncludeTxPowerLevel(true)
             addServiceUuid(UUID_SERVICE_HID)
             addServiceUuid(UUID_SERVICE_BAS)
             addServiceUuid(UUID_SERVICE_DIS)
@@ -665,7 +665,7 @@ class SubActivity : ComponentActivity() {
             setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
             setTimeout(0) // タイムアウト無し
             setConnectable(true)
-            //setDiscoverable(true)
+            //setDiscoverable(true) // 必要
         }
 
         /*
@@ -689,7 +689,9 @@ class SubActivity : ComponentActivity() {
 
         val respBuilder = AdvertiseData.Builder().apply {
             setIncludeDeviceName(true)
-            addServiceUuid(UUID_SERVICE_BAS)
+            //addServiceUuid(UUID_SERVICE_BAS)
+            //addServiceUuid(UUID_SERVICE_GAP)
+            //addServiceUuid(UUID_SERVICE_DIS)
         }
 
         val advertiser = adapter.bluetoothLeAdvertiser
@@ -717,7 +719,7 @@ class SubActivity : ComponentActivity() {
         mAdv?.startAdvertising(
             settingsBuilder.build(),
             dataParcel,
-            //respBuilder.build(),
+            respBuilder.build(),
             advertiseCallback
         )
     }
