@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
@@ -72,6 +73,7 @@ data class UIState(
     val state: String = "進捗",
     val latest: String = "開始",
     val remoteName: String = "",
+    val counter: String = "",
     val console: String = ""
 )
 
@@ -80,14 +82,13 @@ class SubVM : ViewModel() {
     val uiState: StateFlow<UIState> = _uiState.asStateFlow()
 
     fun setState(arg: String) {
-        _uiState.update { current ->
-            current.copy(state = arg)
-        }
+        _uiState.update { current -> current.copy(state = arg) }
     }
     fun setLatest(arg: String) {
-        _uiState.update {
-            it.copy(latest = arg)
-        }
+        _uiState.update { it.copy(latest = arg) }
+    }
+    fun setCounter(arg: String) {
+        _uiState.update { it.copy(counter = arg) }
     }
     fun setRemoteName(arg: String) {
         _uiState.update { it.copy(remoteName = arg) }
@@ -105,7 +106,7 @@ class NotificationData {
     var device: BluetoothDevice? = null
     var char: BluetoothGattCharacteristic? = null
     var byteSeq: ByteArray = ByteArray(0)
-    var responseNeeded: Boolean = false
+    //var responseNeeded: Boolean = false
 }
 
 class SubActivity : ComponentActivity() {
@@ -166,6 +167,8 @@ class SubActivity : ComponentActivity() {
 
     private var mQueue: MutableList<NotificationData> = mutableListOf<NotificationData>()
 
+    private var mMtu = 23
+
     /** UI更新用 */
     private var viewModel1: SubVM? = null
 
@@ -194,11 +197,13 @@ class SubActivity : ComponentActivity() {
             }
         }
 
-        mIntervalTimer2 = object : CountDownTimer(0, 1_000) {
+        mIntervalTimer2 = object : CountDownTimer(Long.MAX_VALUE, 1_000) {
             override fun onTick(millisUntilFinished: Long) {
                 sendNotification()
+                counter1 ++
+                viewModel1?.setCounter("${counter1}")
             }
-            override fun onFinish() {
+            override fun onFinish() { // 0を指定するとfinishしてしまうので大きい値にする
                 short("interval timer onFinish")
             }
         }.start()
@@ -236,12 +241,15 @@ class SubActivity : ComponentActivity() {
             }) {
                 Text(text = "send key report")
             }
-            Button(onClick = {
-                counter1 ++
-                viewModel1?.setLatest("latest $counter1")
-                viewModel1?.addConsole("counter $counter1")
-            }) {
-                Text(text = "update ${uiState.latest}")
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Button(onClick = {
+                    counter1++
+                    viewModel1?.setLatest("latest $counter1")
+                    viewModel1?.addConsole("counter $counter1")
+                }, shape = RoundedCornerShape(8.dp)) {
+                    Text(text = "update ${uiState.latest}")
+                }
+                Text(text = "counter ${uiState.counter}")
             }
             Button(onClick = {
                 inputChara?.let {
@@ -356,7 +364,8 @@ class SubActivity : ComponentActivity() {
                 }
                 override fun onMtuChanged(device: BluetoothDevice?, mtu: Int) {
                     super.onMtuChanged(device, mtu)
-                    viewModel1?.addConsole("onMtuChanged ${device?.name} $mtu")
+                    viewModel1?.addConsole("onMtuChanged $mtu")
+                    mMtu = mtu
                 }
 
                 override fun onCharacteristicReadRequest(
@@ -367,7 +376,7 @@ class SubActivity : ComponentActivity() {
                 ) {
                     super.onCharacteristicReadRequest(device, requestId, offset, characteristic)
 
-                    viewModel1?.addConsole("charread, $requestId, ${characteristic?.instanceId} ${characteristic?.uuid}")
+                    viewModel1?.addConsole("charread, $requestId, ${characteristic?.instanceId} $offset ${characteristic?.uuid}")
 
                     if (characteristic == null) {
                         viewModel1?.addConsole("null char")
@@ -424,6 +433,14 @@ class SubActivity : ComponentActivity() {
                     super.onDescriptorReadRequest(device, requestId, offset, descriptor)
 
                     viewModel1?.addConsole("descread")
+
+                    mGattSrv?.sendResponse(
+                        device,
+                        requestId,
+                        BluetoothGatt.GATT_SUCCESS,
+                        0,
+                        descriptor?.value
+                    )
                 }
 
                 override fun onDescriptorWriteRequest(
@@ -510,6 +527,10 @@ class SubActivity : ComponentActivity() {
             basService.addCharacteristic(charBas)
             gattServer.addService(basService)
 
+
+            val useProtocolMode = false
+            /** 無くすとappearanceアイコン変わらないと思うけどどうしよう;; */
+            val useGAP = false
             /** GAP */
             val gapService = BluetoothGattService(
                 UUID_SERVICE_GAP.uuid,
@@ -531,7 +552,9 @@ class SubActivity : ComponentActivity() {
             @Suppress("DEPRECATION")
             charAppear.value = byteArrayOf(0xC3.toByte(), 0x03.toByte())
             gapService.addCharacteristic(charAppear)
-            gattServer.addService(gapService)
+            if (useGAP) {
+                gattServer.addService(gapService)
+            }
 
 
             /** HIDサービス。ローカル変数 */
@@ -543,19 +566,18 @@ class SubActivity : ComponentActivity() {
             val info1 = BluetoothGattCharacteristic(
                 UUID_CHAR_INFO.uuid,
                 BluetoothGattCharacteristic.PROPERTY_READ,
-                BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED or
-                        BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED
+                BluetoothGattCharacteristic.PERMISSION_READ
             )
             @Suppress("DEPRECATION")
             info1.value = byteArrayOf(
-                0x0b.toByte(), 0x01.toByte(), 0x00.toByte(), 0x15.toByte()
+                0x01.toByte(), 0x11.toByte(), 0x00.toByte(), 0x02.toByte()
             )
             hidService.addCharacteristic(info1)
 
             val cp1 = BluetoothGattCharacteristic(
                 UUID_CHAR_CONTROLPOINT.uuid,
                 BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE,
-                BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED or
+                BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED or
                         BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED
             )
             @Suppress("DEPRECATION")
@@ -566,12 +588,14 @@ class SubActivity : ComponentActivity() {
                 UUID_CHAR_PROTOCOLMODE.uuid,
                 BluetoothGattCharacteristic.PROPERTY_READ or
                         BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE,
-                BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED or
-                        BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE
+                BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED or
+                        BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED
             )
             @Suppress("DEPRECATION")
             pm1.value = byteArrayOf(0x01.toByte()) // TODO: ここは実装する
-            hidService.addCharacteristic(pm1)
+            if (useProtocolMode) {
+                hidService.addCharacteristic(pm1)
+            }
 
 
             val input1 = BluetoothGattCharacteristic(
@@ -584,12 +608,10 @@ class SubActivity : ComponentActivity() {
             /** デスクリプションの追加 */
             val refDesc1 = BluetoothGattDescriptor(
                 UUID_DESC_REPORTREF.uuid,
-                //BluetoothGattDescriptor.PROPERTY_READ or
-                //        BluetoothGattDescriptor.PROPERTY_WRITE,
                 BluetoothGattDescriptor.PERMISSION_READ
             )
             @Suppress("DEPRECATION")
-            refDesc1.value = byteArrayOf(0x01.toByte(), 0x01.toByte())
+            refDesc1.value = byteArrayOf(0x00.toByte(), 0x01.toByte()) // ID無し、input
             input1.addDescriptor(refDesc1)
 
             val cccd1 = BluetoothGattDescriptor(
@@ -665,7 +687,7 @@ class SubActivity : ComponentActivity() {
             setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
             setTimeout(0) // タイムアウト無し
             setConnectable(true)
-            //setDiscoverable(true) // 必要
+            //setDiscoverable(true) // この行は無くても見えた
         }
 
         /*

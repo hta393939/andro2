@@ -49,7 +49,7 @@ import kotlin.experimental.or
 import androidx.core.content.edit
 
 class MainActivity : ComponentActivity() {
-    private val ver = 1115
+    private val ver = 1119
     private var counter: Int = 10
 
     private val logPrefs: SharedPreferences by lazy {
