@@ -479,6 +479,7 @@ class SubActivity : ComponentActivity() {
 
             val useDeviceNameInDIS = false
 
+
             /** デバイス情報 */
             val disService = BluetoothGattService(
                 UUID_SERVICE_DIS.uuid,
@@ -487,7 +488,7 @@ class SubActivity : ComponentActivity() {
             val charManufacturer = BluetoothGattCharacteristic(
                 UUID_CHAR_MANUFACTURER.uuid,
                 BluetoothGattCharacteristic.PROPERTY_READ,
-                BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED
+                BluetoothGattCharacteristic.PERMISSION_READ
             )
             @Suppress("DEPRECATION")
             charManufacturer.value = byteArrayOf(
@@ -541,7 +542,7 @@ class SubActivity : ComponentActivity() {
             val useProtocolMode = false
             /** 無くすとappearanceアイコン変わらないと思うけどどうしよう;; */
             val useGAP = false
-            /** GAP */
+            /** GAPサービス */
             val gapService = BluetoothGattService(
                 UUID_SERVICE_GAP.uuid,
                 BluetoothGattService.SERVICE_TYPE_PRIMARY
@@ -567,27 +568,30 @@ class SubActivity : ComponentActivity() {
             }
 
 
-            /** HIDサービス。ローカル変数 */
+            /** 本命。HIDサービス。ローカル変数 */
             val hidService = BluetoothGattService(
                 UUID_SERVICE_HID.uuid,
                 BluetoothGattService.SERVICE_TYPE_PRIMARY
             )
 
+            /** TODO: HID Information だがここチェックするのか?? */
             val info1 = BluetoothGattCharacteristic(
                 UUID_CHAR_INFO.uuid,
                 BluetoothGattCharacteristic.PROPERTY_READ,
-                BluetoothGattCharacteristic.PERMISSION_READ
+                BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED
             )
             @Suppress("DEPRECATION")
             info1.value = byteArrayOf(
-                0x01.toByte(), 0x11.toByte(), 0x00.toByte(), 0x02.toByte()
+                0x11.toByte(), 0x01.toByte(), 0x00.toByte(),
+                0x02.toByte()
+                //01 11 00 03 // RemoteWake有りは3
             )
             hidService.addCharacteristic(info1)
 
             val cp1 = BluetoothGattCharacteristic(
                 UUID_CHAR_CONTROLPOINT.uuid,
                 BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE,
-                BluetoothGattCharacteristic.PERMISSION_WRITE
+                BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED
             )
             @Suppress("DEPRECATION")
             cp1.value = byteArrayOf(0x00.toByte()) // TODO: ここは実装する
@@ -597,8 +601,7 @@ class SubActivity : ComponentActivity() {
                 UUID_CHAR_PROTOCOLMODE.uuid,
                 BluetoothGattCharacteristic.PROPERTY_READ or
                         BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE,
-                BluetoothGattCharacteristic.PERMISSION_WRITE or
-                        BluetoothGattCharacteristic.PERMISSION_WRITE
+                BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED
             )
             @Suppress("DEPRECATION")
             pm1.value = byteArrayOf(0x01.toByte()) // TODO: ここは実装する
@@ -611,13 +614,13 @@ class SubActivity : ComponentActivity() {
                 UUID_CHAR_INPUT.uuid,
                 BluetoothGattCharacteristic.PROPERTY_NOTIFY or
                         BluetoothGattCharacteristic.PROPERTY_READ,
-                BluetoothGattCharacteristic.PERMISSION_READ
+                BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED
             )
             inputChara = input1
             /** デスクリプションの追加 */
             val refDesc1 = BluetoothGattDescriptor(
                 UUID_DESC_REPORTREF.uuid,
-                BluetoothGattDescriptor.PERMISSION_READ
+                BluetoothGattDescriptor.PERMISSION_READ_ENCRYPTED
             )
             @Suppress("DEPRECATION")
             refDesc1.value = byteArrayOf(0x00.toByte(), 0x01.toByte()) // ID無し、input
@@ -625,7 +628,7 @@ class SubActivity : ComponentActivity() {
 
             val cccd1 = BluetoothGattDescriptor(
                 UUID_DESC_CCCD.uuid,
-                BluetoothGattDescriptor.PERMISSION_WRITE or
+                BluetoothGattDescriptor.PERMISSION_WRITE_ENCRYPTED or
                         BluetoothGattDescriptor.PERMISSION_READ
             )
             @Suppress("DEPRECATION")
@@ -639,7 +642,7 @@ class SubActivity : ComponentActivity() {
             val reportMap1 = BluetoothGattCharacteristic(
                 UUID_CHAR_REPORTMAP.uuid,
                 BluetoothGattCharacteristic.PROPERTY_READ,
-                BluetoothGattDescriptor.PERMISSION_READ
+                BluetoothGattDescriptor.PERMISSION_READ_ENCRYPTED
             )
             // ペリフェラルはこの書き方しか無いらしい
             @Suppress("DEPRECATION")
