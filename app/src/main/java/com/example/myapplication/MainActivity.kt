@@ -139,20 +139,14 @@ class MainActivity : ComponentActivity() {
                     )
 
                 }) {
-                    Text(
-                        text = "サブ起動",
-                        modifier = modifier
-                    )
+                    Text(text = "~~サブ起動~~")
                 }
                 Spacer(Modifier.weight(1f))
                 Button(onClick = {
-                    // TODO: ファイル書き出しオープンしてそれから
+                    // ファイル書き出しオープンしてそれから
                     pickAndCreateLogFile(createFileLauncher)
                 }) {
-                    Text(
-                        text = "ログ!メッセージ",
-                        modifier = modifier
-                    )
+                    Text(text = "create log message file")
                 }
                 Spacer(Modifier.weight(1f))
                 Button(shape = RoundedCornerShape(8.dp),
@@ -164,34 +158,21 @@ class MainActivity : ComponentActivity() {
                         .setMessage("メッセージ $counter")
                         .show()
                 }) {
-                    Text(
-                        text = "アラーと Second $buttonCount",
-                        modifier = modifier
-                    )
+                    Text(text = "アラーと Second $buttonCount")
                 }
                 Spacer(Modifier.weight(1f))
-                Button(onClick = {
-                    init()
-                }) {
-                    Text(
-                        text = "20102 初期化",
-                        modifier = modifier
-                    )
+                Button(shape = RoundedCornerShape(8.dp),
+                    onClick = { init() }) {
+                    Text(text = "1418-1 start")
                 }
                 Spacer(Modifier.weight(1f))
                 Row {
-                    Text(
-                        text = "row1",
-                        modifier = modifier
-                    )
+                    Text(text = "row1")
                     Checkbox(
                         checked = isCheck,
                         onCheckedChange = { isCheck = it }
                     )
-                    Text(
-                        text = "row3",
-                        modifier = modifier
-                    )
+                    Text(text = "row3")
                 }
                 Text(
                     text = "last太文字",

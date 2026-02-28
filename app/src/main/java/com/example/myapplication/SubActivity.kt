@@ -1,6 +1,7 @@
 package com.example.myapplication
 
 import android.Manifest
+import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
@@ -8,33 +9,30 @@ import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothGattServer
 import android.bluetooth.BluetoothGattServerCallback
 import android.bluetooth.BluetoothGattService
-import android.bluetooth.BluetoothHidDevice
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
-import android.bluetooth.BluetoothStatusCodes
 import android.bluetooth.le.AdvertiseCallback
 import android.bluetooth.le.AdvertiseData
 import android.bluetooth.le.AdvertiseSettings
 import android.bluetooth.le.BluetoothLeAdvertiser
 import android.content.Context
+
 import android.os.BatteryManager
 import android.os.Bundle
 import android.os.CountDownTimer
-import android.os.Handler
-import android.os.Parcel
 import android.os.ParcelUuid
 import android.util.Log
 import android.view.Menu
-import android.view.MenuItem
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresPermission
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -43,6 +41,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -51,7 +50,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import java.nio.ByteBuffer
 import java.util.UUID
 
 data class UIState(
@@ -133,10 +131,13 @@ class SubActivity : ComponentActivity() {
     private var serverCallback: BluetoothGattServerCallback? = null
 
     /** サーバー */
-    private var gattSrv: BluetoothGattServer? = null
+    private var mGattSrv: BluetoothGattServer? = null
 
     /** アドバタイザー */
-    private var adv: BluetoothLeAdvertiser? = null
+    private var mAdv: BluetoothLeAdvertiser? = null
+
+    private var mAdapter: BluetoothAdapter? = null
+
     /** 格納用 */
     private var advertiseCallback: AdvertiseCallback? = null
     /** UI更新用 */
@@ -168,25 +169,16 @@ class SubActivity : ComponentActivity() {
     fun PageComponent(viewModel: SubVM) {
         val uiState by viewModel.uiState.collectAsState()
         // Unitを返す@Composableは大文字スタートらしい
-        Column(
-            modifier = Modifier
-        ) {
-            Text(
-                text = "サブアクティビティ"
-            )
-            Text(
-                text = "隠れて見えない;;"
-            )
-            Text(
-                text = "${uiState.state} ${uiState.remoteName}"
-            )
-            Button(onClick = {
-                actAdv()
-            }) {
-                Text(
-                    text = "ボタン0 アドバータイズ開始",
-                    modifier = Modifier
-                )
+        Column(modifier = Modifier
+            .background(color = Color(128, 128, 128))) {
+            Text(text = "サブアクティビティ")
+            Text(text = "隠れて見えない;;")
+            Text(text = "${uiState.state} ${uiState.remoteName}")
+            Button(onClick = { readyServer() }) {
+                Text(text="ready server")
+            }
+            Button(onClick = { startAdv() }) {
+                Text(text = "start advertising")
             }
             Button(onClick = {
                 sendReport()
@@ -235,11 +227,11 @@ class SubActivity : ComponentActivity() {
                 )
             }
             Box(modifier = Modifier.fillMaxWidth()
-                .heightIn(max = 600.dp)) {
+                    .fillMaxHeight()) {
                 Text(
                     text = " ${uiState.console}",
                     modifier = Modifier.fillMaxWidth()
-                        .heightIn(max = 600.dp)
+                        //.heightIn(max = 600.dp)
                         .verticalScroll(rememberScrollState())
                 )
             }
@@ -255,9 +247,10 @@ class SubActivity : ComponentActivity() {
     }
 
     /** BondState はbroadcastで受け取る必要があるらしい */
-    fun actAdv() {
+    fun readyServer() {
         val manager: BluetoothManager = getSystemService(BLUETOOTH_SERVICE) as BluetoothManager
         val adapter = manager.adapter
+        mAdapter = adapter
 /*
         if (adapter.isEnabled) {
             val success = adapter.setName("andro2")
@@ -294,6 +287,7 @@ class SubActivity : ComponentActivity() {
 
                         BluetoothProfile.STATE_DISCONNECTED -> {
                             viewModel1?.addConsole("切断された")
+                            viewModel1?.setState(ucode(0x1f6ab))
                         }
                     }
                 }
@@ -342,7 +336,9 @@ class SubActivity : ComponentActivity() {
                     viewModel1?.addConsole("charread, $requestId, ${characteristic?.instanceId} ${characteristic?.uuid}")
 
                     if (characteristic == null) {
-                        gattSrv?.sendResponse(
+                        viewModel1?.addConsole("null char")
+
+                        mGattSrv?.sendResponse(
                             device,
                             requestId,
                             BluetoothGatt.GATT_FAILURE,
@@ -353,7 +349,7 @@ class SubActivity : ComponentActivity() {
                     }
 
                     @Suppress("DEPRECATION")
-                    gattSrv?.sendResponse(
+                    mGattSrv?.sendResponse(
                         device,
                         requestId,
                         BluetoothGatt.GATT_SUCCESS,
@@ -425,7 +421,8 @@ class SubActivity : ComponentActivity() {
                 this,
                 serverCallback
             )
-            this.gattSrv = gattServer
+            this.mGattSrv = gattServer
+
 
             /** デバイス情報 */
             val disService = BluetoothGattService(
@@ -497,8 +494,9 @@ class SubActivity : ComponentActivity() {
             gapService.addCharacteristic(charAppear)
             gattServer.addService(gapService)
 
+
             /** HIDサービス。ローカル変数 */
-            val gattService = BluetoothGattService(
+            val hidService = BluetoothGattService(
                 UUID_SERVICE_HID.uuid,
                 BluetoothGattService.SERVICE_TYPE_PRIMARY
             )
@@ -513,7 +511,7 @@ class SubActivity : ComponentActivity() {
             info1.value = byteArrayOf(
                 0x0b.toByte(), 0x01.toByte(), 0x00.toByte(), 0x15.toByte()
             )
-            gattService.addCharacteristic(info1)
+            hidService.addCharacteristic(info1)
 
             val cp1 = BluetoothGattCharacteristic(
                 UUID_CHAR_CONTROLPOINT.uuid,
@@ -523,7 +521,7 @@ class SubActivity : ComponentActivity() {
             )
             @Suppress("DEPRECATION")
             cp1.value = byteArrayOf(0x01.toByte()) // TODO: ここは実装する
-            gattService.addCharacteristic(cp1)
+            hidService.addCharacteristic(cp1)
 
             val pm1 = BluetoothGattCharacteristic(
                 UUID_CHAR_PROTOCOLMODE.uuid,
@@ -534,7 +532,7 @@ class SubActivity : ComponentActivity() {
             )
             @Suppress("DEPRECATION")
             pm1.value = byteArrayOf(0x01.toByte()) // TODO: ここは実装する
-            gattService.addCharacteristic(pm1)
+            hidService.addCharacteristic(pm1)
 
 
             val input1 = BluetoothGattCharacteristic(
@@ -555,7 +553,7 @@ class SubActivity : ComponentActivity() {
             refDesc1.value = byteArrayOf(0x01.toByte(), 0x01.toByte())
             input1.addDescriptor(refDesc1)
 
-            gattService.addCharacteristic(input1)
+            hidService.addCharacteristic(input1)
 
             /** リポートマップ */
             val reportMap1 = BluetoothGattCharacteristic(
@@ -567,91 +565,91 @@ class SubActivity : ComponentActivity() {
             // ペリフェラルはこの書き方しか無いらしい
             @Suppress("DEPRECATION")
             reportMap1.value = DescriptorCollection.KEYBOARD
-            gattService.addCharacteristic(reportMap1)
+            hidService.addCharacteristic(reportMap1)
 
-            gattServer.addService(gattService)
+            gattServer.addService(hidService)
 
             // アドバータイズの作文と開始
             short("after add service")
-
-            val dataBuilder = AdvertiseData.Builder().apply {
-                //setIncludeDeviceName(true)
-                setIncludeTxPowerLevel(true)
-                addServiceUuid(UUID_SERVICE_HID)
-                //addServiceUuid(UUID_SERVICE_BAS)
-            }
-            /** gamepad */
-            //val appearValue: Short = 0x03C4.toShort()
-
-            // apply this
-            val settingsBuilder = AdvertiseSettings.Builder().apply {
-                setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
-                setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
-                setTimeout(0) // タイムアウト無し
-                setConnectable(true)
-                setDiscoverable(true)
-            }
-
-
-            /*
-            fun AdvertiseData.writeToParcel(dest: Parcel, flags: Int): Unit {
-                val mid = Parcel.obtain()
-                this.writeToParcel(mid, flags)
-                //val baseBuf = ByteBuffer.allocate(31)
-                //mid.marshall(baseBuf, )
-                // ByteArray
-                val baseBuf = mid.marshall()
-                val edit = baseBuf + 0x03.toByte() + 0x19.toByte() + 0xC4.toByte() + 0x03.toByte()
-                dest.unmarshall(edit, 0, 31)
-            } */
-            // TODO: 上書きチェック↑
-            val dataParcel = dataBuilder.build()
-            /*
-            fun dataParcel.writeToParcel(dest: Parcel, flags: Int): Unit {
-                val mid = Parcel.obtain()
-                this.writeToParcel(mid, flags)
-            } */
-
-            val respBuilder = AdvertiseData.Builder().apply {
-                setIncludeDeviceName(true)
-                addServiceUuid(UUID_SERVICE_BAS)
-            }
-            // (v)
-            val advertiser = adapter.bluetoothLeAdvertiser
-            this.adv = advertiser
-
-            advertiseCallback = object : AdvertiseCallback() {
-                @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
-                override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
-                    super.onStartSuccess(settingsInEffect)
-
-                    short("開始成功")
-                }
-
-                override fun onStartFailure(errorCode: Int) {
-                    super.onStartFailure(errorCode)
-
-                    // NOTE: 1 は31byte超えてデータ多すぎエラーらしい;;
-                    short("開始に失敗 $errorCode")
-                }
-            }
-
-            short("before startAdvertising")
-            viewModel1?.setState(ucode(0x1F4AC))
-
-            advertiser.startAdvertising(
-                settingsBuilder.build(),
-                dataParcel,
-                respBuilder.build(),
-                advertiseCallback
-            )
-
-
         } catch (se: SecurityException) {
             Log.w("BT", "open", se)
 
             short("catch $se")
         }
+    }
+
+    fun startAdv() {
+
+        val dataBuilder = AdvertiseData.Builder().apply {
+            //setIncludeDeviceName(true)
+            setIncludeTxPowerLevel(true)
+            addServiceUuid(UUID_SERVICE_HID)
+            //addServiceUuid(UUID_SERVICE_BAS)
+        }
+        /** gamepad */
+        //val appearValue: Short = 0x03C4.toShort()
+
+        // apply this
+        val settingsBuilder = AdvertiseSettings.Builder().apply {
+            setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
+            setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
+            setTimeout(0) // タイムアウト無し
+            setConnectable(true)
+            setDiscoverable(true)
+        }
+
+        /*
+        fun AdvertiseData.writeToParcel(dest: Parcel, flags: Int): Unit {
+            val mid = Parcel.obtain()
+            this.writeToParcel(mid, flags)
+            //val baseBuf = ByteBuffer.allocate(31)
+            //mid.marshall(baseBuf, )
+            // ByteArray
+            val baseBuf = mid.marshall()
+            val edit = baseBuf + 0x03.toByte() + 0x19.toByte() + 0xC4.toByte() + 0x03.toByte()
+            dest.unmarshall(edit, 0, 31)
+        } */
+        // TODO: 上書きチェック↑
+        val dataParcel = dataBuilder.build()
+        /*
+        fun dataParcel.writeToParcel(dest: Parcel, flags: Int): Unit {
+            val mid = Parcel.obtain()
+            this.writeToParcel(mid, flags)
+        } */
+
+        val respBuilder = AdvertiseData.Builder().apply {
+            setIncludeDeviceName(true)
+            addServiceUuid(UUID_SERVICE_BAS)
+        }
+
+        val advertiser = mAdapter?.bluetoothLeAdvertiser
+        this.mAdv = advertiser
+
+        advertiseCallback = object : AdvertiseCallback() {
+            @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
+            override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
+                super.onStartSuccess(settingsInEffect)
+
+                short("開始成功")
+            }
+
+            override fun onStartFailure(errorCode: Int) {
+                super.onStartFailure(errorCode)
+
+                // NOTE: 1 は31byte超えてデータ多すぎエラーらしい;;
+                short("開始に失敗 $errorCode")
+            }
+        }
+
+        short("before startAdvertising")
+        viewModel1?.setState(ucode(0x1F4AC))
+
+        mAdv?.startAdvertising(
+            settingsBuilder.build(),
+            dataParcel,
+            respBuilder.build(),
+            advertiseCallback
+        )
     }
 
     fun getContext(): Context {
@@ -690,7 +688,7 @@ class SubActivity : ComponentActivity() {
         try {
             @Suppress("DEPRECATION")
             val success = inputChara?.value?.let {
-                gattSrv?.notifyCharacteristicChanged(
+                mGattSrv?.notifyCharacteristicChanged(
                     remoteDevice!!,
                     inputChara!!,
                     false,
