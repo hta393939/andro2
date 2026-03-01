@@ -638,7 +638,7 @@ class SubActivity : ComponentActivity() {
             hidService.addCharacteristic(input1)
 
 
-            /** リポートマップ */
+            /** TODO: リポートマップ。まさか追加する順番とかじゃないよね;; */
             val reportMap1 = BluetoothGattCharacteristic(
                 UUID_CHAR_REPORTMAP.uuid,
                 BluetoothGattCharacteristic.PROPERTY_READ,
